@@ -7,8 +7,16 @@ authors = [
     { name = "Mohammed Fellaji", email = "fellajimohammed@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "a4s-plugin-interface",
+    "numpy>=2.4.2",
+    "pandas>=3.0.0",
+    "scipy>=1.17.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.26,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.uv.sources]
+a4s-plugin-interface = { git = "https://github.com/lux-ai-factory/a4s-plugin-interface" }
