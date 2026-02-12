@@ -108,7 +108,7 @@ class ConfigForm(BaseModel):
 
 
 class DataFrameProvider(BaseInputProvider):
-    def _read_data(self, file_content: bytes | list[bytes]) -> Any:
+    def _read_data(self, file_content: bytes | list[bytes]) -> dict[str, Any]:
         if isinstance(file_content, bytes):
             return {"test": self._read_single_file(file_content)}
 
@@ -117,7 +117,7 @@ class DataFrameProvider(BaseInputProvider):
             for name, f in zip(("train", "test"), file_content)
         }
 
-    def _read_single_file(self, file_content: bytes):
+    def _read_single_file(self, file_content: bytes) -> Any:
         import pandas as pd
 
         file_stream = io.BytesIO(file_content)
