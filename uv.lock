@@ -32,7 +32,7 @@ requires-dist = [
 [[package]]
 name = "a4s-plugin-interface"
 version = "0.1.0"
-source = { git = "https://github.com/lux-ai-factory/a4s-plugin-interface#9af32f09ccf3b63f0ebcdd9205436bf5f4cc42e1" }
+source = { git = "https://github.com/lux-ai-factory/a4s-plugin-interface#7650a06de257bc56f2575f0599c88c1cc53e67ec" }
 dependencies = [
     { name = "pydantic" },
 ]
