@@ -12,6 +12,8 @@ from a4s_plugin_interface.input_providers.base_input_provider import BaseInputPr
 from a4s_plugin_interface.models.measure import Measure, MetricVisualization, ChartType
 from pydantic import BaseModel, Field, model_validator
 
+from ..utils import ConfigForm, Feature, FeatureType, BaseDataPlugin
+
 
 
 
@@ -39,107 +41,7 @@ class ZipDatasetInputProvider(BaseInputProvider):
         return res
 
 
-class FeatureType(str, Enum):
-    INTEGER = "Integer"
-    FLOAT = "Float"
-    CATEGORICAL = "Categorical"
-    DATE = "Date"
-
-
-class Feature(BaseModel):
-    name: str = Field(...)
-    min: float = Field(...)
-    max: float = Field(...)
-    type: FeatureType = Field(...)
-
-
-class ConfigForm(BaseModel):
-    target_feature: str | None = Field(default=None, title="Target Feature")
-    date_feature: str | None = Field(default=None, title="Date Feature")
-
-    features: list[Feature] = Field(
-        default_factory=list, description="List of features to use for prediction"
-    )
-
-    @model_validator(mode="after")
-    def validate_special_features(self):
-        self.target_feature = self.target_feature or None
-        self.date_feature = self.date_feature or None
-
-        if self.target_feature is None:
-            return self
-
-        target_feature = next(
-            (f for f in self.features if f.name == self.target_feature), None
-        )
-        if target_feature is None:
-            raise ValueError("Target feature must be one of the configured features.")
-
-        if self.date_feature is None:
-            return self
-
-        date_feature = next(
-            (f for f in self.features if f.name == self.date_feature), None
-        )
-        if date_feature is None:
-            raise ValueError("Date feature must be one of the configured features.")
-
-        if date_feature.type != FeatureType.DATE:
-            raise ValueError("Date feature must be of type Date.")
-
-        if target_feature == date_feature:
-            raise ValueError("Target feature must be different from date feature.")
-        return self
-
-
-class DataFrameProvider(BaseInputProvider):
-    def _read_data(self, file_content: bytes) -> Any:
-        import pandas as pd
-
-        file_stream = io.BytesIO(file_content)
-        try:
-            return pd.read_parquet(file_stream)
-        except Exception:
-            file_stream.seek(0)
-            try:
-                return pd.read_csv(file_stream)
-            except Exception as e:
-                raise ValueError("File is neither a valid Parquet nor CSV.") from e
-
-
-class DataAnomalyPlugin(BaseEvaluationPlugin[ConfigForm]):
-    form_ui_schema = {
-        "features": {
-            "ui:options": {
-                "orderable": False,
-                "addable": False,
-            },
-            "items": {
-                "ui:field": "LayoutGridField",
-                "ui:layoutGrid": {
-                    "ui:row": {
-                        "className": "row",
-                        "children": [
-                            {"ui:col": {"className": "col-4", "children": ["name"]}},
-                            {"ui:col": {"className": "col-3", "children": ["min"]}},
-                            {"ui:col": {"className": "col-3", "children": ["max"]}},
-                            {
-                                "ui:col": {
-                                    "className": "col-2",
-                                    "children": ["type"],
-                                }
-                            },
-                        ],
-                    }
-                },
-            },
-        },
-    }
-
-    @property
-    def feature_flags(self) -> PluginFeatureFlags:
-        return PluginFeatureFlags(can_parse_config_from_dataset=True)
-
+class DataAnomalyPlugin(BaseDataPlugin):
     def parse_config_from_dataset(self) -> dict | None:
         config: ConfigForm = ConfigForm(
             features=[],
@@ -189,70 +91,13 @@ class DataAnomalyPlugin(BaseEvaluationPlugin[ConfigForm]):
 
         return config.model_dump()
 
-    def on_config_change(
-        self, form_data: dict | None
-    ) -> tuple[dict | None, dict, dict]:
-        config_schema, ui_schema = self.get_full_schema()
-
-        if form_data is None:
-            ui_schema["date_feature"] = {"ui:widget": "hidden"}
-            ui_schema["target_feature"] = {"ui:widget": "hidden"}
-            return None, config_schema, ui_schema
-
-        if (
-            "properties" in config_schema
-            and "date_feature" in config_schema["properties"]
-        ):
-            possible_date_features = [
-                f["name"]
-                for f in form_data.get("features", [])
-                if f["type"] in (FeatureType.DATE, FeatureType.CATEGORICAL)
-            ]
-            if possible_date_features:
-                # NOTE: adding an empty string will force the user to make a choice
-                possible_date_features.insert(0, "")
-                config_schema["properties"]["date_feature"]["enum"] = (
-                    possible_date_features
-                )
-                default_date = (
-                    possible_date_features[0] if possible_date_features else None
-                )
-                config_schema["properties"]["date_feature"]["default"] = default_date
-            else:
-                ui_schema["date_feature"] = {"ui:widget": "hidden"}
-
-        if (
-            "properties" in config_schema
-            and "target_feature" in config_schema["properties"]
-        ):
-            possible_target_features = [
-                f["name"]
-                for f in form_data.get("features", [])
-                if f["type"]
-                in (FeatureType.INTEGER, FeatureType.FLOAT, FeatureType.CATEGORICAL)
-            ]
-            if possible_target_features:
-                # NOTE: adding an empty string will force the user to make a choice
-                possible_target_features.insert(0, "")
-                config_schema["properties"]["target_feature"]["enum"] = (
-                    possible_target_features
-                )
-                default_target = (
-                    possible_target_features[-1] if possible_target_features else None
-                )
-                config_schema["properties"]["target_feature"]["default"] = (
-                    default_target
-                )
-            else:
-                ui_schema["target_feature"] = {"ui:widget": "hidden"}
-
-        return form_data, config_schema, ui_schema
 
     def set_dataset_input_provider(
         self, file_content: bytes | None
     ) -> BaseInputProvider:
         self.dataset_input_provider = ZipDatasetInputProvider(file_content)
         return self.dataset_input_provider
+
 
     @property
     def display_icon(self) -> str:
@@ -503,7 +348,7 @@ class DataAnomalyPlugin(BaseEvaluationPlugin[ConfigForm]):
             chart_type=ChartType.TABLE, metrics=self.get_metrics()
         )
 
-        radar = MetricVisualization(
+        piechart = MetricVisualization(
             chart_type=ChartType.PIE, 
             metrics=[
                 "Anomaly Pass",
@@ -514,5 +359,5 @@ class DataAnomalyPlugin(BaseEvaluationPlugin[ConfigForm]):
 
         return [
             table, 
-            radar
+            piechart
         ]
