@@ -120,11 +120,12 @@ class DataAnomalyPlugin(BaseDataPlugin):
         df_evaluate: pd.DataFrame = self.get_dataset().get("evaluate", pd.DataFrame())
         df_reference: pd.DataFrame = self.get_dataset().get("reference", pd.DataFrame())
 
-
+        # TODO: Should be reworked
         measure_results["New Categories"] = self.__compute_new_categories(df_reference, df_evaluate, categorical_features)
         measure_results["Missing Categories"] = self.__compute_missing_categories(df_reference, df_evaluate, categorical_features)
         measure_results["Upper Constraint Violations"] = self.__compute_upper_constraint(df_evaluate, numerical_features, config.features)
         measure_results["Lower Constraint Violations"] = self.__compute_lower_constraint(df_evaluate, numerical_features, config.features)
+        measure_results["Distribution Outlier"] = self.__compute_distribution(df_reference, df_evaluate, numerical_features)
 
         return {
             "measures_results": measure_results
@@ -223,6 +224,31 @@ class DataAnomalyPlugin(BaseDataPlugin):
         
         return return_measures
 
+
+    def __compute_distribution(self, 
+            df_reference: pd.DataFrame, 
+            df_evaluate: pd.DataFrame, 
+            numerical_features: list[str]
+    ) -> list[dict[str, Any]]:
+        return_measures = []
+        for feat_name in numerical_features:
+            ref_mean = df_reference[feat_name].mean()
+            ref_std = df_reference[feat_name].std()
+
+            values = df_evaluate[feat_name]
+            
+            dist_violations = ((values < ref_mean - 3 * ref_std) | (values > ref_mean + 3 * ref_std)).sum()
+
+            # Add measures
+            measure_distribution = {
+                "name": "Distribution Outlier",
+                "score": float(dist_violations),
+                "description": f"{feat_name}",
+            }
+            return_measures.append(measure_distribution)
+        
+        return return_measures
+
     @metric("New Categories")
     def new_categories(self, evaluate_result: dict) -> list[Measure]:
         list_measures = evaluate_result.get("measures_results", {}).get("New Categories", [])
@@ -284,6 +310,22 @@ class DataAnomalyPlugin(BaseDataPlugin):
             measure_results.append(measure_categories)
 
         return measure_results
+    
+
+    @metric("Distribution Outlier")
+    def distribution_outlier(self, evaluate_result: dict) -> list[Measure]:
+        list_measures = evaluate_result.get("measures_results", {}).get("Distribution Outlier", [])
+        measure_results = []
+        for measure_dict in list_measures:
+            # Add measures
+            measure_categories = Measure(
+                name="Distribution Outlier",
+                score=measure_dict.get("score"),
+                description=measure_dict.get("description"),
+            )
+            measure_results.append(measure_categories)
+
+        return measure_results
 
 
     @metric("Anomaly Pass")
@@ -305,6 +347,10 @@ class DataAnomalyPlugin(BaseDataPlugin):
         for lower_constraint_measure in evaluate_result.get("measures_results", {}).get("Lower Constraint Violations", []):
             if lower_constraint_measure.get("score") == 0: 
                 score_pass += 1
+        
+        for distribution_measure in evaluate_result.get("measures_results", {}).get("Distribution Outlier", []):
+            if distribution_measure.get("score") == 0:
+                score_pass += 1
 
         measure_pass = Measure(name="Anomaly Pass", score=float(score_pass))        
         return [measure_pass]
@@ -316,6 +362,10 @@ class DataAnomalyPlugin(BaseDataPlugin):
         for missing_cat_measure in evaluate_result.get("measures_results", {}).get("Missing Categories", []):
             if missing_cat_measure.get("score") > 0: 
                 score_low += 1 
+        
+        for distribution_measure in evaluate_result.get("measures_results", {}).get("Distribution Outlier", []): 
+            if distribution_measure.get("score") > 0: 
+                score_low += 1
 
         measure_low = Measure(name="Anomaly Low", score=float(score_low))        
 
