@@ -1,14 +1,14 @@
-from itertools import chain
-
 from a4s_plugin_interface.models.measure import Measure, MetricVisualization, ChartType
 
 from ..utils import BaseDataPlugin, add_metrics, merge_dicts
 from .drift_detector import TabularDriftDetector
+from .data_shift import DataShiftMonitor
 
 
 @add_metrics
 class DataDriftPlugin(BaseDataPlugin):
     metric_names = [
+        "data_shift",
         "wasserstein_distance",
         "psi",
         "psi_chi2_p_value",
@@ -51,11 +51,14 @@ class DataDriftPlugin(BaseDataPlugin):
         detector = TabularDriftDetector()
         detector.fit(features, reference)
 
-        metrics = list(
-            chain.from_iterable(
-                [detector(date, mask, evaluated) for date, mask in df_date_iterator]
-            )
-        )
+        data_shift_monitor = DataShiftMonitor()
+        data_shift_monitor.fit(features, reference)
+
+        metrics = []
+
+        for date, mask in df_date_iterator:
+            metrics.extend(detector(date, mask, evaluated))
+            metrics.extend(data_shift_monitor(date, mask, evaluated))
 
         return merge_dicts(metrics)
 
