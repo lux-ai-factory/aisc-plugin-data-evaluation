@@ -1,14 +1,17 @@
+from itertools import chain
+
 from a4s_plugin_interface.models.measure import Measure, MetricVisualization, ChartType
 
 from ..utils import BaseDataPlugin, add_metrics, merge_dicts
 from .drift_detector import TabularDriftDetector
-from .data_shift import DataShiftMonitor
 
 
 @add_metrics
 class DataDriftPlugin(BaseDataPlugin):
     metric_names = [
-        "data_shift",
+        "avg_data_drift",
+        "count_features_with_drift",
+        "data_drift",
         "wasserstein_distance",
         "psi",
         "psi_chi2_p_value",
@@ -44,21 +47,18 @@ class DataDriftPlugin(BaseDataPlugin):
         if reference is None:
             raise ValueError("Reference dataset is missing.")
 
+        detector = TabularDriftDetector()
+        detector.fit(features, reference)
+
         df_date_iterator = self.dataset_input_provider.iter(
             date_feature, frequency, window_size
         )
 
-        detector = TabularDriftDetector()
-        detector.fit(features, reference)
-
-        data_shift_monitor = DataShiftMonitor()
-        data_shift_monitor.fit(features, reference)
-
-        metrics = []
-
-        for date, mask in df_date_iterator:
-            metrics.extend(detector(date, mask, evaluated))
-            metrics.extend(data_shift_monitor(date, mask, evaluated))
+        metrics = list(
+            chain.from_iterable(
+                detector(date, mask, evaluated) for date, mask in df_date_iterator
+            )
+        )
 
         return merge_dicts(metrics)
 

@@ -69,10 +69,17 @@ class TabularDriftDetector:
         with ThreadPoolExecutor() as pool:
             metrics = list(chain.from_iterable(pool.map(compute_metric, self.features)))
 
-        ratio_features_with_drift = sum(
+        count_features_with_drift = sum(
             m.get("drift_detected", {}).get("score")
             for m in metrics
             if "drift_detected" in m.keys()
+        )
+        ratio_features_with_drift = count_features_with_drift / len(self.features)
+
+        avg_data_drift = sum(
+            m.get("data_drift", {}).get("score")
+            for m in metrics
+            if "data_drift" in m.keys()
         ) / len(self.features)
 
         # global_auc = float(self._global_drift(evaluated))
@@ -95,8 +102,24 @@ class TabularDriftDetector:
                 #     )
                 # },
                 {
+                    "count_features_with_drift": dict(
+                        score=count_features_with_drift,
+                        date=date,
+                        description=None,
+                        feature_pid=None,
+                    )
+                },
+                {
                     "ratio_features_with_drift": dict(
                         score=ratio_features_with_drift,
+                        date=date,
+                        description=None,
+                        feature_pid=None,
+                    )
+                },
+                {
+                    "avg_data_drift": dict(
+                        score=avg_data_drift,
                         date=date,
                         description=None,
                         feature_pid=None,
@@ -180,6 +203,7 @@ class TabularDriftDetector:
         return psi, psi_pvalue
 
     def _numeric_drift(self, ref, eval, col):
+        import numpy as np
         from scipy.stats import ks_2samp, wasserstein_distance
 
         ref = ref.dropna()
@@ -191,12 +215,17 @@ class TabularDriftDetector:
 
         wass = wasserstein_distance(ref, eval)
 
+        # Standardized mean difference
+        smd = abs(np.mean(ref) - np.mean(eval)) / (np.std(ref) + 1e-6)
+
         return {
             "psi": psi,
             "psi_chi2_p_value": psi_p,
             "ks_statistic": ks_stat,
             "ks_pvalue": ks_p,
             "wasserstein_distance": wass,
+            "standardized_mean_diff": smd,
+            "data_drift": psi,
             "drift_detected": psi > self.numeric_threshold,
         }
 
@@ -222,10 +251,15 @@ class TabularDriftDetector:
         eval_prob = eval_counts / eval_counts.sum()
         js = jensenshannon(ref_prob, eval_prob, base=2) ** 2
 
+        # Total Variation Distance
+        tvd = 0.5 * np.sum(np.abs(ref_prob - eval_prob))
+
         return {
             "chi2_statistic": chi2_stat,
             "chi2_pvalue": chi2_p,
             "jensenshannon_distance": js,
+            "total_variance_distance": tvd,
+            "data_drift": js,
             "drift_detected": js > self.categorical_threshold,
         }
 
