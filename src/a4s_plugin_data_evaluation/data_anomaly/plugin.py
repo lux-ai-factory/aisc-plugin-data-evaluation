@@ -15,6 +15,14 @@ from pydantic import BaseModel, Field, model_validator
 from ..utils import ConfigForm, Feature, FeatureType, BaseDataPlugin
 
 
+NEW_CATEGORIES_MEASURE_NAME = "New Categories"
+MISSING_CATEGORIES_MEASURE_NAME = "Missing Categories"
+UPPER_CONSTRAINT_VIOLATIONS_MEASURE_NAME = "Upper Constraint Violations"
+LOWER_CONSTRAINT_VIOLATIONS_MEASURE_NAME = "Lower Constraint Violations"
+DISTRIBUTION_OUTLIER_MEASURE_NAME = "Distribution Outlier"
+ANOMALY_PASS_MEASURE_NAME = "Anomaly Pass"
+ANOMALY_LOW_MEASURE_NAME = "Anomaly Low"
+ANOMALY_SEVERE_MEASURE_NAME = "Anomaly Severe"
 
 
 logger = logging.getLogger(__name__)
@@ -121,11 +129,11 @@ class DataAnomalyPlugin(BaseDataPlugin):
         df_reference: pd.DataFrame = self.get_dataset().get("reference", pd.DataFrame())
 
         # TODO: Should be reworked
-        measure_results["New Categories"] = self.__compute_new_categories(df_reference, df_evaluate, categorical_features)
-        measure_results["Missing Categories"] = self.__compute_missing_categories(df_reference, df_evaluate, categorical_features)
-        measure_results["Upper Constraint Violations"] = self.__compute_upper_constraint(df_evaluate, numerical_features, config.features)
-        measure_results["Lower Constraint Violations"] = self.__compute_lower_constraint(df_evaluate, numerical_features, config.features)
-        measure_results["Distribution Outlier"] = self.__compute_distribution(df_reference, df_evaluate, numerical_features)
+        measure_results[NEW_CATEGORIES_MEASURE_NAME] = self.__compute_new_categories(df_reference, df_evaluate, categorical_features)
+        measure_results[MISSING_CATEGORIES_MEASURE_NAME] = self.__compute_missing_categories(df_reference, df_evaluate, categorical_features)
+        measure_results[UPPER_CONSTRAINT_VIOLATIONS_MEASURE_NAME] = self.__compute_upper_constraint(df_evaluate, numerical_features, config.features)
+        measure_results[LOWER_CONSTRAINT_VIOLATIONS_MEASURE_NAME] = self.__compute_lower_constraint(df_evaluate, numerical_features, config.features)
+        measure_results[DISTRIBUTION_OUTLIER_MEASURE_NAME] = self.__compute_distribution(df_reference, df_evaluate, numerical_features)
 
         return {
             "measures_results": measure_results
@@ -146,7 +154,6 @@ class DataAnomalyPlugin(BaseDataPlugin):
 
             # Add measures
             measure_categories = {
-                "name": "New Categories",
                 "score": float(len(new_categories)),
                 "description": f"{feat_name}",
             }
@@ -169,7 +176,6 @@ class DataAnomalyPlugin(BaseDataPlugin):
 
             # Add measures
             measure_categories = {
-                "name": "Missing Categories",
                 "score": float(len(missing_categories)),
                 "description": f"{feat_name}",
             }
@@ -193,7 +199,6 @@ class DataAnomalyPlugin(BaseDataPlugin):
 
             # Add measures
             measure_upper_constraint = {
-                "name": "Upper Constraint Violations",
                 "score": float(max_violations),
                 "description": f"{feature.name}",
             }
@@ -216,7 +221,6 @@ class DataAnomalyPlugin(BaseDataPlugin):
 
             # Add measures
             measure_lower_constraint = {
-                "name": "Lower Constraint Violations",
                 "score": float(min_violations),
                 "description": f"{feature.name}",
             }
@@ -241,7 +245,6 @@ class DataAnomalyPlugin(BaseDataPlugin):
 
             # Add measures
             measure_distribution = {
-                "name": "Distribution Outlier",
                 "score": float(dist_violations),
                 "description": f"{feat_name}",
             }
@@ -249,14 +252,14 @@ class DataAnomalyPlugin(BaseDataPlugin):
         
         return return_measures
 
-    @metric("New Categories")
+    @metric(NEW_CATEGORIES_MEASURE_NAME)
     def new_categories(self, evaluate_result: dict) -> list[Measure]:
-        list_measures = evaluate_result.get("measures_results", {}).get("New Categories", [])
+        list_measures = evaluate_result.get("measures_results", {}).get(NEW_CATEGORIES_MEASURE_NAME, [])
         measure_results = []
         for measure_dict in list_measures:
             # Add measures
             measure_categories = Measure(
-                name="New Categories",
+                name=NEW_CATEGORIES_MEASURE_NAME,
                 score=measure_dict.get("score"),
                 description=measure_dict.get("description"),
             )
@@ -264,14 +267,14 @@ class DataAnomalyPlugin(BaseDataPlugin):
 
         return measure_results
     
-    @metric("Missing Categories")
+    @metric(MISSING_CATEGORIES_MEASURE_NAME)
     def missing_categories(self, evaluate_result: dict) -> list[Measure]:
-        list_measures = evaluate_result.get("measures_results", {}).get("Missing Categories", [])
+        list_measures = evaluate_result.get("measures_results", {}).get(MISSING_CATEGORIES_MEASURE_NAME, [])
         measure_results = []
         for measure_dict in list_measures:
             # Add measures
             measure_categories = Measure(
-                name="Missing Categories",
+                name=MISSING_CATEGORIES_MEASURE_NAME,
                 score=measure_dict.get("score"),
                 description=measure_dict.get("description"),
             )
@@ -280,14 +283,14 @@ class DataAnomalyPlugin(BaseDataPlugin):
         return measure_results
 
 
-    @metric("Upper Constraint Violations")
+    @metric(UPPER_CONSTRAINT_VIOLATIONS_MEASURE_NAME)
     def upper_constraint_violations(self, evaluate_result: dict) -> list[Measure]:
-        list_measures = evaluate_result.get("measures_results", {}).get("Upper Constraint Violations", [])
+        list_measures = evaluate_result.get("measures_results", {}).get(UPPER_CONSTRAINT_VIOLATIONS_MEASURE_NAME, [])
         measure_results = []
         for measure_dict in list_measures:
             # Add measures
             measure_categories = Measure(
-                name="Upper Constraint Violations",
+                name=UPPER_CONSTRAINT_VIOLATIONS_MEASURE_NAME,
                 score=measure_dict.get("score"),
                 description=measure_dict.get("description"),
             )
@@ -296,14 +299,14 @@ class DataAnomalyPlugin(BaseDataPlugin):
         return measure_results
     
 
-    @metric("Lower Constraint Violations")
+    @metric(LOWER_CONSTRAINT_VIOLATIONS_MEASURE_NAME)
     def lower_constraint_violations(self, evaluate_result: dict) -> list[Measure]:
-        list_measures = evaluate_result.get("measures_results", {}).get("Lower Constraint Violations", [])
+        list_measures = evaluate_result.get("measures_results", {}).get(LOWER_CONSTRAINT_VIOLATIONS_MEASURE_NAME, [])
         measure_results = []
         for measure_dict in list_measures:
             # Add measures
             measure_categories = Measure(
-                name="Lower Constraint Violations",
+                name=LOWER_CONSTRAINT_VIOLATIONS_MEASURE_NAME,
                 score=measure_dict.get("score"),
                 description=measure_dict.get("description"),
             )
@@ -312,14 +315,14 @@ class DataAnomalyPlugin(BaseDataPlugin):
         return measure_results
     
 
-    @metric("Distribution Outlier")
+    @metric(DISTRIBUTION_OUTLIER_MEASURE_NAME)
     def distribution_outlier(self, evaluate_result: dict) -> list[Measure]:
-        list_measures = evaluate_result.get("measures_results", {}).get("Distribution Outlier", [])
+        list_measures = evaluate_result.get("measures_results", {}).get(DISTRIBUTION_OUTLIER_MEASURE_NAME, [])
         measure_results = []
         for measure_dict in list_measures:
             # Add measures
             measure_categories = Measure(
-                name="Distribution Outlier",
+                name=DISTRIBUTION_OUTLIER_MEASURE_NAME,
                 score=measure_dict.get("score"),
                 description=measure_dict.get("description"),
             )
@@ -328,65 +331,64 @@ class DataAnomalyPlugin(BaseDataPlugin):
         return measure_results
 
 
-    @metric("Anomaly Pass")
+    @metric(ANOMALY_PASS_MEASURE_NAME)
     def aggregation_pass(self, evaluate_result: dict) -> list[Measure]:
         score_pass = 0
-        for new_cat_measure in evaluate_result.get("measures_results", {}).get("New Categories", []):
+        for new_cat_measure in evaluate_result.get("measures_results", {}).get(NEW_CATEGORIES_MEASURE_NAME, []):
             if new_cat_measure.get("score") == 0:
                 score_pass += 1
 
-        for missing_cat_measure in evaluate_result.get("measures_results", {}).get("Missing Categories", []):
+        for missing_cat_measure in evaluate_result.get("measures_results", {}).get(MISSING_CATEGORIES_MEASURE_NAME, []):
             if missing_cat_measure.get("score") == 0: 
                 score_pass += 1 
 
-
-        for upper_constraint_measure in evaluate_result.get("measures_results", {}).get("Upper Constraint Violations", []):
+        for upper_constraint_measure in evaluate_result.get("measures_results", {}).get(UPPER_CONSTRAINT_VIOLATIONS_MEASURE_NAME, []):
             if upper_constraint_measure.get("score") == 0: 
                 score_pass += 1
 
-        for lower_constraint_measure in evaluate_result.get("measures_results", {}).get("Lower Constraint Violations", []):
+        for lower_constraint_measure in evaluate_result.get("measures_results", {}).get(LOWER_CONSTRAINT_VIOLATIONS_MEASURE_NAME, []):
             if lower_constraint_measure.get("score") == 0: 
                 score_pass += 1
         
-        for distribution_measure in evaluate_result.get("measures_results", {}).get("Distribution Outlier", []):
+        for distribution_measure in evaluate_result.get("measures_results", {}).get(DISTRIBUTION_OUTLIER_MEASURE_NAME, []):
             if distribution_measure.get("score") == 0:
                 score_pass += 1
 
-        measure_pass = Measure(name="Anomaly Pass", score=float(score_pass))        
+        measure_pass = Measure(name=ANOMALY_PASS_MEASURE_NAME, score=float(score_pass))        
         return [measure_pass]
 
 
-    @metric("Anomaly Low")
+    @metric(ANOMALY_LOW_MEASURE_NAME)
     def aggregation_low(self, evaluate_result: dict) -> list[Measure]:
         score_low = 0
-        for missing_cat_measure in evaluate_result.get("measures_results", {}).get("Missing Categories", []):
+        for missing_cat_measure in evaluate_result.get("measures_results", {}).get(MISSING_CATEGORIES_MEASURE_NAME, []):
             if missing_cat_measure.get("score") > 0: 
                 score_low += 1 
         
-        for distribution_measure in evaluate_result.get("measures_results", {}).get("Distribution Outlier", []): 
+        for distribution_measure in evaluate_result.get("measures_results", {}).get(DISTRIBUTION_OUTLIER_MEASURE_NAME, []): 
             if distribution_measure.get("score") > 0: 
                 score_low += 1
 
-        measure_low = Measure(name="Anomaly Low", score=float(score_low))        
+        measure_low = Measure(name=ANOMALY_LOW_MEASURE_NAME, score=float(score_low))        
 
         return [measure_low]
 
-    @metric("Anomaly Severe")
+    @metric(ANOMALY_SEVERE_MEASURE_NAME)
     def aggregation_severe(self, evaluate_result: dict) -> list[Measure]:
         score_severe = 0
-        for missing_cat_measure in evaluate_result.get("measures_results", {}).get("New Categories", []):
+        for missing_cat_measure in evaluate_result.get("measures_results", {}).get(NEW_CATEGORIES_MEASURE_NAME, []):
             if missing_cat_measure.get("score") > 0: 
                 score_severe += 1 
 
-        for upper_constraint_measure in evaluate_result.get("measures_results", {}).get("Upper Constraint Violations", []):
+        for upper_constraint_measure in evaluate_result.get("measures_results", {}).get(UPPER_CONSTRAINT_VIOLATIONS_MEASURE_NAME, []):
             if upper_constraint_measure.get("score") > 0: 
                 score_severe += 1
         
-        for lower_constraint_measure in evaluate_result.get("measures_results", {}).get("Lower Constraint Violations", []):
+        for lower_constraint_measure in evaluate_result.get("measures_results", {}).get(LOWER_CONSTRAINT_VIOLATIONS_MEASURE_NAME, []):
             if lower_constraint_measure.get("score") > 0: 
                 score_severe += 1
 
-        measure_severe = Measure(name="Anomaly Severe", score=float(score_severe))        
+        measure_severe = Measure(name=ANOMALY_SEVERE_MEASURE_NAME, score=float(score_severe))        
 
         return [measure_severe]
 
@@ -401,9 +403,9 @@ class DataAnomalyPlugin(BaseDataPlugin):
         piechart = MetricVisualization(
             chart_type=ChartType.PIE, 
             metrics=[
-                "Anomaly Pass",
-                "Anomaly Low",
-                "Anomaly Severe",
+                ANOMALY_PASS_MEASURE_NAME,
+                ANOMALY_LOW_MEASURE_NAME,
+                ANOMALY_SEVERE_MEASURE_NAME,
             ]
         )
 
