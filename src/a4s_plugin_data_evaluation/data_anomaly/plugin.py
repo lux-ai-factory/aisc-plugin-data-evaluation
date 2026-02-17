@@ -117,38 +117,35 @@ class DataAnomalyPlugin(BaseDataPlugin):
         measure_results = dict()
         config = self.validate_config_form_data(config_data)
 
-        categorical_features = [
+        self.categorical_features = [
             f.name for f in config.features if f.type is FeatureType.CATEGORICAL
         ]
-        numerical_features = [
+        self.numerical_features = [
             f.name for f in config.features if f.type is FeatureType.INTEGER or f.type is FeatureType.FLOAT
         ]
 
 
-        df_evaluate: pd.DataFrame = self.get_dataset().get("evaluate", pd.DataFrame())
-        df_reference: pd.DataFrame = self.get_dataset().get("reference", pd.DataFrame())
+        self.df_evaluate: pd.DataFrame = self.get_dataset().get("evaluate", pd.DataFrame())
+        self.df_reference: pd.DataFrame = self.get_dataset().get("reference", pd.DataFrame())
 
         # TODO: Should be reworked
-        measure_results[NEW_CATEGORIES_MEASURE_NAME] = self.__compute_new_categories(df_reference, df_evaluate, categorical_features)
-        measure_results[MISSING_CATEGORIES_MEASURE_NAME] = self.__compute_missing_categories(df_reference, df_evaluate, categorical_features)
-        measure_results[UPPER_CONSTRAINT_VIOLATIONS_MEASURE_NAME] = self.__compute_upper_constraint(df_evaluate, numerical_features, config.features)
-        measure_results[LOWER_CONSTRAINT_VIOLATIONS_MEASURE_NAME] = self.__compute_lower_constraint(df_evaluate, numerical_features, config.features)
-        measure_results[DISTRIBUTION_OUTLIER_MEASURE_NAME] = self.__compute_distribution(df_reference, df_evaluate, numerical_features)
+        measure_results[NEW_CATEGORIES_MEASURE_NAME] = self.__compute_new_categories()
+        measure_results[MISSING_CATEGORIES_MEASURE_NAME] = self.__compute_missing_categories()
+        measure_results[UPPER_CONSTRAINT_VIOLATIONS_MEASURE_NAME] = self.__compute_upper_constraint(config.features)
+        measure_results[LOWER_CONSTRAINT_VIOLATIONS_MEASURE_NAME] = self.__compute_lower_constraint(config.features)
+        measure_results[DISTRIBUTION_OUTLIER_MEASURE_NAME] = self.__compute_distribution()
 
         return {
             "measures_results": measure_results
         }
 
     def __compute_new_categories(self, 
-            df_reference: pd.DataFrame, 
-            df_evaluate: pd.DataFrame, 
-            categorical_features: list[str]
     ) -> list[dict[str, Any]]:
         return_measures = []
-        for feat_name in categorical_features:
+        for feat_name in self.categorical_features:
             # Categories
-            ref_categories = set(df_reference[feat_name].unique())
-            eval_categories = set(df_evaluate[feat_name].unique())
+            ref_categories = set(self.df_reference[feat_name].unique())
+            eval_categories = set(self.df_evaluate[feat_name].unique())
 
             new_categories = eval_categories - ref_categories  # set difference
 
@@ -162,15 +159,12 @@ class DataAnomalyPlugin(BaseDataPlugin):
         return return_measures
     
     def __compute_missing_categories(self, 
-            df_reference: pd.DataFrame, 
-            df_evaluate: pd.DataFrame, 
-            categorical_features: list[str]
     ) -> list[dict[str, Any]]:
         return_measures = []
-        for feat_name in categorical_features:
+        for feat_name in self.categorical_features:
             # Categories
-            ref_categories = set(df_reference[feat_name].unique())
-            eval_categories = set(df_evaluate[feat_name].unique())
+            ref_categories = set(self.df_reference[feat_name].unique())
+            eval_categories = set(self.df_evaluate[feat_name].unique())
 
             missing_categories = ref_categories - eval_categories  # set difference
 
@@ -185,16 +179,14 @@ class DataAnomalyPlugin(BaseDataPlugin):
     
 
     def __compute_upper_constraint(self, 
-            df_evaluate: pd.DataFrame, 
-            numerical_features: list[str],
             config_features: list[Feature]
     ) -> list[dict[str, Any]]:
         return_measures = []
         for feature in config_features:
-            if feature.name not in numerical_features: 
+            if feature.name not in self.numerical_features: 
                 continue
 
-            values = df_evaluate[feature.name]
+            values = self.df_evaluate[feature.name]
             max_violations = (values > feature.max).sum()
 
             # Add measures
@@ -207,16 +199,14 @@ class DataAnomalyPlugin(BaseDataPlugin):
         return return_measures
     
     def __compute_lower_constraint(self, 
-            df_evaluate: pd.DataFrame, 
-            numerical_features: list[str],
             config_features: list[Feature]
     ) -> list[dict[str, Any]]:
         return_measures = []
         for feature in config_features:
-            if feature.name not in numerical_features: 
+            if feature.name not in self.numerical_features: 
                 continue
 
-            values = df_evaluate[feature.name]
+            values = self.df_evaluate[feature.name]
             min_violations = (values < feature.min).sum()
 
             # Add measures
@@ -230,16 +220,13 @@ class DataAnomalyPlugin(BaseDataPlugin):
 
 
     def __compute_distribution(self, 
-            df_reference: pd.DataFrame, 
-            df_evaluate: pd.DataFrame, 
-            numerical_features: list[str]
     ) -> list[dict[str, Any]]:
         return_measures = []
-        for feat_name in numerical_features:
-            ref_mean = df_reference[feat_name].mean()
-            ref_std = df_reference[feat_name].std()
+        for feat_name in self.numerical_features:
+            ref_mean = self.df_reference[feat_name].mean()
+            ref_std = self.df_reference[feat_name].std()
 
-            values = df_evaluate[feat_name]
+            values = self.df_evaluate[feat_name]
             
             dist_violations = ((values < ref_mean - 3 * ref_std) | (values > ref_mean + 3 * ref_std)).sum()
 
