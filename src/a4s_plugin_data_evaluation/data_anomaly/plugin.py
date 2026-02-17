@@ -334,24 +334,13 @@ class DataAnomalyPlugin(BaseDataPlugin):
     @metric(ANOMALY_PASS_MEASURE_NAME)
     def aggregation_pass(self, evaluate_result: dict) -> list[Measure]:
         score_pass = 0
-        for new_cat_measure in evaluate_result.get("measures_results", {}).get(NEW_CATEGORIES_MEASURE_NAME, []):
-            if new_cat_measure.get("score") == 0:
-                score_pass += 1
-
-        for missing_cat_measure in evaluate_result.get("measures_results", {}).get(MISSING_CATEGORIES_MEASURE_NAME, []):
-            if missing_cat_measure.get("score") == 0: 
-                score_pass += 1 
-
-        for upper_constraint_measure in evaluate_result.get("measures_results", {}).get(UPPER_CONSTRAINT_VIOLATIONS_MEASURE_NAME, []):
-            if upper_constraint_measure.get("score") == 0: 
-                score_pass += 1
-
-        for lower_constraint_measure in evaluate_result.get("measures_results", {}).get(LOWER_CONSTRAINT_VIOLATIONS_MEASURE_NAME, []):
-            if lower_constraint_measure.get("score") == 0: 
-                score_pass += 1
-        
-        for distribution_measure in evaluate_result.get("measures_results", {}).get(DISTRIBUTION_OUTLIER_MEASURE_NAME, []):
-            if distribution_measure.get("score") == 0:
+        measures = [
+            measure
+            for measure_family_list in evaluate_result.get("measures_results", {}).values()
+            for measure in measure_family_list
+        ]
+        for measure in measures:
+            if measure.get("score") == 0: 
                 score_pass += 1
 
         measure_pass = Measure(name=ANOMALY_PASS_MEASURE_NAME, score=float(score_pass))        
@@ -361,12 +350,17 @@ class DataAnomalyPlugin(BaseDataPlugin):
     @metric(ANOMALY_LOW_MEASURE_NAME)
     def aggregation_low(self, evaluate_result: dict) -> list[Measure]:
         score_low = 0
-        for missing_cat_measure in evaluate_result.get("measures_results", {}).get(MISSING_CATEGORIES_MEASURE_NAME, []):
-            if missing_cat_measure.get("score") > 0: 
-                score_low += 1 
-        
-        for distribution_measure in evaluate_result.get("measures_results", {}).get(DISTRIBUTION_OUTLIER_MEASURE_NAME, []): 
-            if distribution_measure.get("score") > 0: 
+        measures = [
+            measure
+            for measure_family_name, measure_family_list in evaluate_result.get("measures_results", {}).items()
+            for measure in measure_family_list 
+            if measure_family_name in [
+                MISSING_CATEGORIES_MEASURE_NAME, 
+                DISTRIBUTION_OUTLIER_MEASURE_NAME
+            ]
+        ]
+        for measure in measures:
+            if measure.get("score") > 0: 
                 score_low += 1
 
         measure_low = Measure(name=ANOMALY_LOW_MEASURE_NAME, score=float(score_low))        
@@ -376,16 +370,20 @@ class DataAnomalyPlugin(BaseDataPlugin):
     @metric(ANOMALY_SEVERE_MEASURE_NAME)
     def aggregation_severe(self, evaluate_result: dict) -> list[Measure]:
         score_severe = 0
-        for missing_cat_measure in evaluate_result.get("measures_results", {}).get(NEW_CATEGORIES_MEASURE_NAME, []):
-            if missing_cat_measure.get("score") > 0: 
-                score_severe += 1 
 
-        for upper_constraint_measure in evaluate_result.get("measures_results", {}).get(UPPER_CONSTRAINT_VIOLATIONS_MEASURE_NAME, []):
-            if upper_constraint_measure.get("score") > 0: 
-                score_severe += 1
-        
-        for lower_constraint_measure in evaluate_result.get("measures_results", {}).get(LOWER_CONSTRAINT_VIOLATIONS_MEASURE_NAME, []):
-            if lower_constraint_measure.get("score") > 0: 
+        measures = [
+            measure
+            for measure_family_name, measure_family_list in evaluate_result.get("measures_results", {}).items()
+            for measure in measure_family_list 
+            if measure_family_name in [
+                NEW_CATEGORIES_MEASURE_NAME, 
+                UPPER_CONSTRAINT_VIOLATIONS_MEASURE_NAME, 
+                LOWER_CONSTRAINT_VIOLATIONS_MEASURE_NAME
+            ]
+        ]
+
+        for measure in measures:
+            if measure.get("score") > 0: 
                 score_severe += 1
 
         measure_severe = Measure(name=ANOMALY_SEVERE_MEASURE_NAME, score=float(score_severe))        
