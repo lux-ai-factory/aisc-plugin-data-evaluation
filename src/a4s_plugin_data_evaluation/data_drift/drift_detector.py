@@ -63,7 +63,7 @@ class TabularDriftDetector:
 
     def __call__(self, date, mask, evaluated: pd.DataFrame) -> list[dict]:
         compute_metric = partial(
-            self.feature_drift, date=date, mask=mask, evaluated=evaluated
+            self._feature_drift, date=date, mask=mask, evaluated=evaluated
         )
 
         with ThreadPoolExecutor() as pool:
@@ -107,7 +107,7 @@ class TabularDriftDetector:
 
         return metrics
 
-    def feature_drift(self, feature, date, mask, evaluated):
+    def _feature_drift(self, feature, date, mask, evaluated):
         feature_type = feature.type
         logger.debug(f"Processing feature: {feature.name} (type: {feature_type})")
         logger.debug(f"Computing feature drift test for feature type: {feature_type}")
@@ -158,38 +158,38 @@ class TabularDriftDetector:
                 )
             return results
 
-    def _psi(self, ref, new, bin_edges):
+    def _psi(self, ref, eval, bin_edges):
         import numpy as np
         from scipy.stats import chi2
 
         ref_counts, _ = np.histogram(ref, bins=bin_edges)
-        new_counts, _ = np.histogram(new, bins=bin_edges)
+        eval_counts, _ = np.histogram(eval, bins=bin_edges)
 
         ref_perc = ref_counts / len(ref)
-        new_perc = new_counts / len(new)
+        eval_perc = eval_counts / len(eval)
 
         ref_perc = np.where(ref_perc == 0, 1e-6, ref_perc)
-        new_perc = np.where(new_perc == 0, 1e-6, new_perc)
+        eval_perc = np.where(eval_perc == 0, 1e-6, eval_perc)
 
-        psi = float(np.sum((ref_perc - new_perc) * np.log(ref_perc / new_perc)))
+        psi = float(np.sum((ref_perc - eval_perc) * np.log(ref_perc / eval_perc)))
 
-        chi_stat = 2 * len(new) * psi
+        chi_stat = 2 * len(eval) * psi
         # NOTE: drift detected if p_value < 0.05
         psi_pvalue = float(1 - chi2.cdf(chi_stat, len(ref_counts) - 1))
 
         return psi, psi_pvalue
 
-    def _numeric_drift(self, ref, new, col):
+    def _numeric_drift(self, ref, eval, col):
         from scipy.stats import ks_2samp, wasserstein_distance
 
         ref = ref.dropna()
-        new = new.dropna()
+        eval = eval.dropna()
 
-        psi, psi_p = self._psi(ref, new, self.bins[col])
+        psi, psi_p = self._psi(ref, eval, self.bins[col])
 
-        ks_stat, ks_p = ks_2samp(ref, new)
+        ks_stat, ks_p = ks_2samp(ref, eval)
 
-        wass = wasserstein_distance(ref, new)
+        wass = wasserstein_distance(ref, eval)
 
         return {
             "psi": psi,
@@ -200,27 +200,27 @@ class TabularDriftDetector:
             "drift_detected": psi > self.numeric_threshold,
         }
 
-    def _categorical_drift(self, ref, new, col):
+    def _categorical_drift(self, ref, eval, col):
         import numpy as np
         from scipy.stats import chi2_contingency
         from scipy.spatial.distance import jensenshannon
 
         ref = ref.astype(str)
-        new = new.astype(str)
+        eval = eval.astype(str)
 
-        levels = list(set(ref.unique()).union(set(new.unique())))
+        levels = list(set(ref.unique()).union(set(eval.unique())))
 
         ref_counts = ref.value_counts().reindex(levels, fill_value=0)
-        new_counts = new.value_counts().reindex(levels, fill_value=0)
+        eval_counts = eval.value_counts().reindex(levels, fill_value=0)
 
         # Chi-square
-        contingency = np.array([ref_counts, new_counts])
+        contingency = np.array([ref_counts, eval_counts])
         chi2_stat, chi2_p, _, _ = chi2_contingency(contingency)
 
         # JS divergence
         ref_prob = ref_counts / ref_counts.sum()
-        new_prob = new_counts / new_counts.sum()
-        js = jensenshannon(ref_prob, new_prob, base=2) ** 2
+        eval_prob = eval_counts / eval_counts.sum()
+        js = jensenshannon(ref_prob, eval_prob, base=2) ** 2
 
         return {
             "chi2_statistic": chi2_stat,
@@ -229,19 +229,19 @@ class TabularDriftDetector:
             "drift_detected": js > self.categorical_threshold,
         }
 
-    def _global_drift(self, new_data):
+    def _global_drift(self, eval_data):
         from sklearn.model_selection import train_test_split
         from sklearn.linear_model import LogisticRegression
         from sklearn.preprocessing import LabelEncoder
         from sklearn.metrics import roc_auc_score
 
         ref = self.reference.loc[:, self.features_names].copy()
-        new = new_data.loc[:, self.features_names].copy()
+        eval = eval_data.loc[:, self.features_names].copy()
 
         ref["__label__"] = 0
-        new["__label__"] = 1
+        eval["__label__"] = 1
 
-        combined = pd.concat([ref, new], axis=0).reset_index(drop=True)
+        combined = pd.concat([ref, eval], axis=0).reset_index(drop=True)
 
         y = combined["__label__"]
         X = combined.drop(columns="__label__")
