@@ -1,5 +1,4 @@
-from itertools import chain
-
+from a4s_plugin_interface import TaskProgress
 from a4s_plugin_interface.models.measure import Measure, MetricVisualization, ChartType
 
 from ..utils import BaseDataPlugin, add_metrics, merge_dicts
@@ -50,15 +49,17 @@ class DataDriftPlugin(BaseDataPlugin):
         detector = TabularDriftDetector()
         detector.fit(features, reference)
 
-        df_date_iterator = self.dataset_input_provider.iter(
-            date_feature, frequency, window_size
+        dates_masks = list(
+            self.dataset_input_provider.iter(date_feature, frequency, window_size)
         )
+        iterations = len(dates_masks)
 
-        metrics = list(
-            chain.from_iterable(
-                detector(date, mask, evaluated) for date, mask in df_date_iterator
+        metrics = []
+        for i, (date, mask) in enumerate(dates_masks, start=1):
+            metrics.extend(detector(date, mask, evaluated))
+            self.report_progress(
+                TaskProgress(progress=i / iterations, extra={"iteration": i})
             )
-        )
 
         return merge_dicts(metrics)
 
