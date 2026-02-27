@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from itertools import chain
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor
@@ -16,8 +17,6 @@ class TabularDriftDetector:
         n_bins: int = 10,
         numeric_threshold: float = 0.1,
         categorical_threshold: float = 0.1,
-        global_auc_threshold: float = 0.6,
-        random_state: int = 42,
     ):
         self.reference = None
         self.features = None
@@ -28,9 +27,6 @@ class TabularDriftDetector:
 
         self.numeric_threshold = numeric_threshold
         self.categorical_threshold = categorical_threshold
-        self.global_auc_threshold = global_auc_threshold
-
-        self.random_state = random_state
 
         self.numeric_features = None
         self.categorical_features = None
@@ -61,12 +57,13 @@ class TabularDriftDetector:
                 self.features.append(feature)
                 self.features_names.append(col)
 
-    def __call__(self, date, mask, evaluated: pd.DataFrame) -> list[dict]:
-        compute_metric = partial(
-            self._feature_drift, date=date, mask=mask, evaluated=evaluated
-        )
+    def __call__(self, evaluated: pd.DataFrame, date=None) -> list[dict]:
+        if date is None:
+            date = datetime.now()
 
-        with ThreadPoolExecutor() as pool:
+        compute_metric = partial(self._feature_drift, date=date, evaluated=evaluated)
+
+        with ThreadPoolExecutor(max_workers=7) as pool:
             metrics = list(chain.from_iterable(pool.map(compute_metric, self.features)))
 
         count_features_with_drift = sum(
@@ -82,29 +79,12 @@ class TabularDriftDetector:
             if "data_drift" in m.keys()
         ) / len(self.features)
 
-        # global_auc = float(self._global_drift(evaluated))
         metrics.extend(
             [
-                # {
-                #     "global_auc_cls_based": dict(
-                #         score=global_auc,
-                #         date=date,
-                #         description=None,
-                #         feature_pid=None,
-                #     )
-                # },
-                # {
-                #     "global_drift_detected": dict(
-                #         score=global_auc > self.global_auc_threshold,
-                #         date=date,
-                #         description=None,
-                #         feature_pid=None,
-                #     )
-                # },
                 {
-                    "count_features_with_drift": dict(
+                    "Number of Drifted Features": dict(
                         score=count_features_with_drift,
-                        date=date,
+                        time=date,
                         description=None,
                         feature_pid=None,
                     )
@@ -112,15 +92,15 @@ class TabularDriftDetector:
                 {
                     "ratio_features_with_drift": dict(
                         score=ratio_features_with_drift,
-                        date=date,
+                        time=date,
                         description=None,
                         feature_pid=None,
                     )
                 },
                 {
-                    "avg_data_drift": dict(
+                    "Data Drift": dict(
                         score=avg_data_drift,
-                        date=date,
+                        time=date,
                         description=None,
                         feature_pid=None,
                     )
@@ -130,19 +110,17 @@ class TabularDriftDetector:
 
         return metrics
 
-    def _feature_drift(self, feature, date, mask, evaluated):
+    def _feature_drift(self, feature, date, evaluated):
         feature_type = feature.type
         logger.debug(f"Processing feature: {feature.name} (type: {feature_type})")
         logger.debug(f"Computing feature drift test for feature type: {feature_type}")
-
-        masked_evaluated = evaluated.loc[mask] if mask is not None else evaluated
 
         metrics = {}
 
         if feature.name in self.numeric_features:
             metrics = self._numeric_drift(
                 self.reference[feature.name],
-                masked_evaluated[feature.name],
+                evaluated[feature.name],
                 feature.name,
             )
             for metric_name, score in metrics.items():
@@ -151,7 +129,7 @@ class TabularDriftDetector:
         elif feature.name in self.categorical_features:
             metrics = self._categorical_drift(
                 self.reference[feature.name],
-                masked_evaluated[feature.name],
+                evaluated[feature.name],
                 feature.name,
             )
             for metric_name, score in metrics.items():
@@ -173,9 +151,9 @@ class TabularDriftDetector:
                     {
                         metric_name: dict(
                             score=score,
-                            date=date,
+                            time=date,
                             description=feature.name,
-                            feature_pid=feature.pid,
+                            # feature_pid=feature.pid,
                         )
                     }
                 )
@@ -262,57 +240,3 @@ class TabularDriftDetector:
             "data_drift": js,
             "drift_detected": js > self.categorical_threshold,
         }
-
-    def _global_drift(self, eval_data):
-        from sklearn.model_selection import train_test_split
-        from sklearn.linear_model import LogisticRegression
-        from sklearn.preprocessing import LabelEncoder
-        from sklearn.metrics import roc_auc_score
-
-        ref = self.reference.loc[:, self.features_names].copy()
-        eval = eval_data.loc[:, self.features_names].copy()
-
-        ref["__label__"] = 0
-        eval["__label__"] = 1
-
-        combined = pd.concat([ref, eval], axis=0).reset_index(drop=True)
-
-        y = combined["__label__"]
-        X = combined.drop(columns="__label__")
-
-        # encode categorical
-        for col in self.categorical_features:
-            le = LabelEncoder()
-            X[col] = le.fit_transform(X[col].astype(str))
-
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3, random_state=self.random_state
-        )
-
-        clf = LogisticRegression(max_iter=5000, solver="lbfgs")
-
-        clf.fit(X_train, y_train)
-
-        y_pred = clf.predict_proba(X_test)[:, 1]
-        auc = roc_auc_score(y_test, y_pred)
-
-        return auc
-
-
-if __name__ == "__main__":
-    import json
-    from pathlib import Path
-
-    d = Path.home() / "Documents/projects/data/time_series"
-
-    ref = pd.read_csv(d / "training_data.csv")
-    evl = pd.read_csv(d / "testing_data.csv")
-
-    with open(d / "plugin_config.json", "r") as f:
-        config = json.load(f)
-
-    features = [Feature(**item) for item in config["features"]]
-
-    detector = TabularDriftDetector()
-    detector.fit(features, ref)
-    res = detector(None, None, evl)

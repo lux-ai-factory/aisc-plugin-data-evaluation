@@ -1,13 +1,14 @@
 from a4s_plugin_interface import TaskProgress
 from a4s_plugin_interface.models.measure import Measure, MetricVisualization, ChartType
 
-from ..utils import BaseDataPlugin, add_metrics, merge_dicts
+from ..base_data_plugin import BaseDataPlugin
+from ..utils import add_metrics, group_metrics
 from .drift_detector import TabularDriftDetector
 
 
 @add_metrics
 class DataDriftPlugin(BaseDataPlugin):
-    metric_names = [
+    drift_metric_names = [
         "avg_data_drift",
         "count_features_with_drift",
         "data_drift",
@@ -22,6 +23,10 @@ class DataDriftPlugin(BaseDataPlugin):
         "drift_detected",
         "ratio_features_with_drift",
     ]
+
+    @classmethod
+    def metric_names(cls):
+        return cls.drift_metric_names
 
     @property
     def display_icon(self) -> str:
@@ -56,12 +61,13 @@ class DataDriftPlugin(BaseDataPlugin):
 
         metrics = []
         for i, (date, mask) in enumerate(dates_masks, start=1):
-            metrics.extend(detector(date, mask, evaluated))
+            metrics.extend(detector(evaluated.loc[mask], date))
+
             self.report_progress(
                 TaskProgress(progress=i / iterations, extra={"iteration": i})
             )
 
-        return merge_dicts(metrics)
+        return group_metrics(metrics)
 
     def get_metric_visualizations(self, config_data: dict) -> list[MetricVisualization]:
         config = self.validate_config_form_data(config_data)
@@ -70,7 +76,7 @@ class DataDriftPlugin(BaseDataPlugin):
             chart_type=ChartType.TABLE, metrics=self.get_metrics()
         )
 
-        metrics = self.metric_names
+        metrics = self.metric_names()
         is_multivalued = config.date_feature and config.frequency and config.window_size
         chart_type = ChartType.LINE if is_multivalued else ChartType.BARS
 
