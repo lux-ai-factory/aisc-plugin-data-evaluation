@@ -1,5 +1,7 @@
 import logging
 from abc import abstractmethod
+from typing import Any
+
 from a4s_plugin_interface.base_evaluation_plugin import (
     BaseEvaluationPlugin,
     PluginFeatureFlags,
@@ -11,18 +13,34 @@ from .utils import Feature, FeatureType
 from .config_form import ConfigForm, FORM_UI_SCHEMA
 from .data_input_provider import DataFrameProvider
 
-logger = logging.getLogger(__name__)
-
 
 class BaseDataPlugin(BaseEvaluationPlugin[ConfigForm]):
+    _logger: logging.Logger | None = None
+
+    @property
+    def logger(self) -> logging.Logger:
+        """Return logger from parent class, or create a fallback if not available."""
+        if hasattr(super(), "logger"):
+            return super().logger  # ty: ignore[unresolved-attribute]
+        if self._logger is None:
+            self._logger = logging.getLogger(self.__class__.__name__)
+        return self._logger
+
+    @logger.setter
+    def logger(self, value: logging.Logger) -> None:
+        """Allow setting the logger (useful for testing)."""
+        self._logger = value
+
     form_ui_schema = FORM_UI_SCHEMA
 
     @property
     def feature_flags(self) -> PluginFeatureFlags:
         return PluginFeatureFlags(can_parse_config_from_dataset=True)
 
-    def parse_config_from_dataset(self) -> dict | None:
+    def parse_config_from_dataset(self) -> dict[str, Any] | None:
         import pandas as pd
+
+        self.logger.info("Parsing config from dataset")
 
         config: ConfigForm = ConfigForm(
             frequency="",
@@ -33,6 +51,9 @@ class BaseDataPlugin(BaseEvaluationPlugin[ConfigForm]):
         )
 
         df: pd.DataFrame = self.get_dataset()["test"]
+        self.logger.debug(
+            "Dataset loaded with %d rows and %d columns", len(df), len(df.columns)
+        )
 
         for col_name in df.columns:
             col_data = df[col_name]
@@ -45,8 +66,8 @@ class BaseDataPlugin(BaseEvaluationPlugin[ConfigForm]):
             elif pd.api.types.is_object_dtype(col_data):
                 temp = pd.to_datetime(col_data, errors="coerce")
                 if temp.isna().any():
-                    logger.warning(
-                        f"Attempted to parse {col_name} as a date, but failed."
+                    self.logger.warning(
+                        "Attempted to parse '%s' as a date, but failed", col_name
                     )
                 else:
                     feature_type = FeatureType.DATE
@@ -71,12 +92,20 @@ class BaseDataPlugin(BaseEvaluationPlugin[ConfigForm]):
                 name=col_name, min=col_min, max=col_max, type=feature_type
             )
             config.features.append(feature)
+            self.logger.debug(
+                "Detected feature '%s' as %s (min=%.2f, max=%.2f)",
+                col_name,
+                feature_type,
+                col_min,
+                col_max,
+            )
 
+        self.logger.info("Parsed %d features from dataset", len(config.features))
         return config.model_dump()
 
     def on_config_change(
-        self, form_data: dict | None
-    ) -> tuple[dict | None, dict, dict]:
+        self, form_data: ConfigForm | None
+    ) -> tuple[ConfigForm | None, dict[str, Any], dict[str, Any]]:
         config_schema, ui_schema = self.get_full_schema()
 
         if form_data is None:
@@ -84,13 +113,18 @@ class BaseDataPlugin(BaseEvaluationPlugin[ConfigForm]):
             ui_schema["target_feature"] = {"ui:widget": "hidden"}
             return None, config_schema, ui_schema
 
+        # Convert to dict for property access if needed
+        form_dict = (
+            form_data.model_dump() if isinstance(form_data, ConfigForm) else form_data
+        )
+
         if (
             "properties" in config_schema
             and "date_feature" in config_schema["properties"]
         ):
             possible_date_features = [
                 f["name"]
-                for f in form_data.get("features", [])
+                for f in form_dict.get("features", [])
                 if f["type"] in (FeatureType.DATE, FeatureType.CATEGORICAL)
             ]
             if possible_date_features:
@@ -112,7 +146,7 @@ class BaseDataPlugin(BaseEvaluationPlugin[ConfigForm]):
         ):
             possible_target_features = [
                 f["name"]
-                for f in form_data.get("features", [])
+                for f in form_dict.get("features", [])
                 if f["type"]
                 in (FeatureType.INTEGER, FeatureType.FLOAT, FeatureType.CATEGORICAL)
             ]
@@ -136,7 +170,9 @@ class BaseDataPlugin(BaseEvaluationPlugin[ConfigForm]):
     def set_dataset_input_provider(
         self, file_content: bytes | list[bytes] | None
     ) -> BaseInputProvider:
-        self.dataset_input_provider = DataFrameProvider(file_content)
+        self.dataset_input_provider = DataFrameProvider(
+            file_content  # ty: ignore[invalid-argument-type]
+        )
         return self.dataset_input_provider
 
     @abstractmethod

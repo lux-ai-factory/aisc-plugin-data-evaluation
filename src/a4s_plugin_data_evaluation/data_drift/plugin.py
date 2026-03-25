@@ -1,13 +1,16 @@
 from a4s_plugin_interface import TaskProgress
-from a4s_plugin_interface.models.measure import Measure, MetricVisualization, ChartType
+from a4s_plugin_interface.models.measure import MetricVisualization, ChartType
 
 from ..base_data_plugin import BaseDataPlugin
+from ..data_input_provider import DataFrameProvider
 from ..utils import add_metrics, group_metrics
 from .drift_detector import TabularDriftDetector
 
 
 @add_metrics
 class DataDriftPlugin(BaseDataPlugin):
+    plugin_name = "Data Drift"
+
     drift_metric_names = [
         "avg_data_drift",
         "count_features_with_drift",
@@ -32,8 +35,10 @@ class DataDriftPlugin(BaseDataPlugin):
     def display_icon(self) -> str:
         return "alt_route"
 
-    def evaluate(self, config_data: dict) -> list[Measure]:
+    def evaluate(self, config_data: dict):
         config = self.validate_config_form_data(config_data)
+        self.logger.info("Starting drift evaluation")
+        self.logger.info("Parsed %d features from config", len(config.features))
 
         target_col = config.target_feature
         date_feature = config.date_feature
@@ -43,6 +48,9 @@ class DataDriftPlugin(BaseDataPlugin):
         features = [
             f for f in config.features if f.name not in (target_col, date_feature)
         ]
+        self.logger.debug(
+            "Evaluating %d features (excluding target and date)", len(features)
+        )
 
         datasets = self.get_dataset()
 
@@ -51,22 +59,36 @@ class DataDriftPlugin(BaseDataPlugin):
         if reference is None:
             raise ValueError("Reference dataset is missing.")
 
+        self.logger.debug(
+            "Reference shape: %s, Evaluated shape: %s", reference.shape, evaluated.shape
+        )
+
         detector = TabularDriftDetector()
         detector.fit(features, reference)
 
+        assert isinstance(self.dataset_input_provider, DataFrameProvider)
         dates_masks = list(
             self.dataset_input_provider.iter(date_feature, frequency, window_size)
         )
         iterations = len(dates_masks)
+        self.logger.info("Processing %d time windows", iterations)
 
         metrics = []
         for i, (date, mask) in enumerate(dates_masks, start=1):
+            self.logger.debug(
+                "Processing window %d/%d (date=%s, samples=%d)",
+                i,
+                iterations,
+                date,
+                mask.sum(),
+            )
             metrics.extend(detector(evaluated.loc[mask], date))
 
             self.report_progress(
                 TaskProgress(progress=i / iterations, extra={"iteration": i})
             )
 
+        self.logger.info("Drift evaluation completed")
         return group_metrics(metrics)
 
     def get_metric_visualizations(self, config_data: dict) -> list[MetricVisualization]:

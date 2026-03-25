@@ -1,14 +1,16 @@
 import io
 import zipfile
-from typing import Any
+from collections.abc import Iterator
+from datetime import datetime
 
+import pandas as pd
 from a4s_plugin_interface.input_providers.base_input_provider import BaseInputProvider
 
 from .iterators import DateIterator
 
 
 class DataFrameProvider(BaseInputProvider):
-    def _read_data(self, file_content: bytes | list[bytes]) -> dict[str, Any]:
+    def _read_data(self, file_content: bytes | list[bytes]) -> dict[str, pd.DataFrame]:
         if isinstance(file_content, bytes):
             # Check if it's a zip file by signature
             if file_content.startswith(b"PK\x03\x04"):
@@ -25,7 +27,7 @@ class DataFrameProvider(BaseInputProvider):
             for name, f in zip(("train", "test"), file_content)
         }
 
-    def _read_zip_file(self, file_content: bytes) -> dict[str, Any]:
+    def _read_zip_file(self, file_content: bytes) -> dict[str, pd.DataFrame]:
         import pandas as pd
 
         fnames = ("train.csv", "test.csv")
@@ -43,7 +45,7 @@ class DataFrameProvider(BaseInputProvider):
             "test": pd.read_csv(io.BytesIO(files[fnames[1]])),
         }
 
-    def _read_single_file(self, file_content: bytes) -> Any:
+    def _read_single_file(self, file_content: bytes) -> pd.DataFrame:
         import pandas as pd
 
         file_stream = io.BytesIO(file_content)
@@ -58,13 +60,11 @@ class DataFrameProvider(BaseInputProvider):
 
     def iter(
         self,
-        date_feature: str,
-        frequency: str,
-        window_size: str,
-        date_round: str = "1 D",
-    ):
-        import pandas as pd
-
+        date_feature: str | None,
+        frequency: str | None,
+        window_size: str | None,
+        date_round: str | None = "1 D",
+    ) -> Iterator[tuple[datetime | None, pd.Series]]:
         if date_feature is not None:
             self._data["test"][date_feature] = pd.to_datetime(
                 self._data["test"][date_feature]

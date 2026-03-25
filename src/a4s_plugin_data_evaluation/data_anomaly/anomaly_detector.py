@@ -1,5 +1,6 @@
 from datetime import datetime
 from itertools import chain
+from typing import Any
 
 import pandas as pd
 
@@ -7,17 +8,21 @@ from ..utils import Feature, FeatureType
 
 
 class TabularAnomalyDetector:
-    def __init__(self):
+    reference: pd.DataFrame | None
+    features: list[Feature]
+    features_names: list[str]
+    numeric_features: set[str]
+    categorical_features: set[str]
+
+    def __init__(self) -> None:
         self.reference = None
-        self.features = None
-        self.features_names = None
+        self.features = []
+        self.features_names = []
 
-        self.bins = {}
+        self.numeric_features = set()
+        self.categorical_features = set()
 
-        self.numeric_features = None
-        self.categorical_features = None
-
-    def fit(self, features: list[Feature], reference: pd.DataFrame):
+    def fit(self, features: list[Feature], reference: pd.DataFrame) -> None:
         self.reference = reference
         self.features = []
         self.features_names = []
@@ -37,11 +42,13 @@ class TabularAnomalyDetector:
                 self.features.append(feature)
                 self.features_names.append(col)
 
-    def __call__(self, evaluated: pd.DataFrame, date=None) -> list[dict]:
+    def __call__(
+        self, evaluated: pd.DataFrame, date: datetime | None = None
+    ) -> list[dict[str, Any]]:
         if date is None:
             date = datetime.now()
 
-        metrics = list(
+        metrics: list[dict[str, Any]] = list(
             chain(
                 self._analyse_categorical_features(evaluated, date),
                 self._analyse_numerical_features(evaluated, date),
@@ -90,9 +97,12 @@ class TabularAnomalyDetector:
         )
         return metrics
 
-    def _analyse_categorical_features(self, evaluated: pd.DataFrame, date):
-        # New and missing Categories
-        metrics = []
+    def _analyse_categorical_features(
+        self, evaluated: pd.DataFrame, date: datetime
+    ) -> list[dict[str, Any]]:
+        assert self.reference is not None
+
+        metrics: list[dict[str, Any]] = []
 
         for feat_name in self.categorical_features:
             ref_categories = set(self.reference[feat_name].unique())
@@ -121,8 +131,12 @@ class TabularAnomalyDetector:
             )
         return metrics
 
-    def _analyse_numerical_features(self, evaluated: pd.DataFrame, date):
-        metrics = []
+    def _analyse_numerical_features(
+        self, evaluated: pd.DataFrame, date: datetime
+    ) -> list[dict[str, Any]]:
+        assert self.reference is not None
+
+        metrics: list[dict[str, Any]] = []
 
         for feature in self.features:
             if feature.name not in self.numeric_features:

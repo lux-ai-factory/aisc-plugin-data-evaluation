@@ -1,8 +1,11 @@
+from typing import Any
+
 from pydantic import BaseModel, Field, model_validator
 
 from .utils import Feature, FeatureType
 
-FORM_UI_SCHEMA = {
+
+FORM_UI_SCHEMA: dict[str, dict[str, Any]] = {
     "features": {
         "ui:options": {
             "orderable": False,
@@ -54,7 +57,7 @@ class ConfigForm(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_special_features(self):
+    def validate_special_features(self) -> "ConfigForm":
         self.frequency = self.frequency
         self.window_size = self.window_size
         self.target_feature = self.target_feature or None
