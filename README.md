@@ -168,7 +168,7 @@ src/a4s_plugin_data_evaluation/
 
 ## Tech Stack
 
-- **Python** 3.13+
+- **Python** 3.12+
 - **Pydantic** - Configuration and validation
 - **NumPy/pandas** - Data processing
 - **SciPy** - Statistical tests and metrics
