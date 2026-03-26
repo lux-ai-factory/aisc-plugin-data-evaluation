@@ -1,6 +1,6 @@
 [project]
 name = "a4s-plugin-data-evaluation"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python plugin for data evaluation implementing data drift and anomaly detection"
 readme = "README.md"
 authors = [
