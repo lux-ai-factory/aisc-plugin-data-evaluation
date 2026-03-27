@@ -48,6 +48,12 @@ class DataDriftPlugin(BaseDataPlugin):
         features = [
             f for f in config.features if f.name not in (target_col, date_feature)
         ]
+
+        if not features:
+            self.logger.warning(
+                "No input features found after excluding target and date"
+            )
+
         self.logger.debug(
             "Evaluating %d features (excluding target and date)", len(features)
         )
@@ -56,7 +62,9 @@ class DataDriftPlugin(BaseDataPlugin):
 
         evaluated = datasets["test"]
         reference = datasets.get("train")
+
         if reference is None:
+            self.logger.critical("Reference dataset is missing")
             raise ValueError("Reference dataset is missing.")
 
         self.logger.debug(
@@ -75,6 +83,14 @@ class DataDriftPlugin(BaseDataPlugin):
 
         metrics = []
         for i, (date, mask) in enumerate(dates_masks, start=1):
+            if mask.sum() == 0:
+                self.logger.warning(
+                    "Window %d/%d (date=%s) has no samples, skipping",
+                    i,
+                    iterations,
+                    date,
+                )
+                continue
             self.logger.debug(
                 "Processing window %d/%d (date=%s, samples=%d)",
                 i,
@@ -82,7 +98,17 @@ class DataDriftPlugin(BaseDataPlugin):
                 date,
                 mask.sum(),
             )
-            metrics.extend(detector(evaluated.loc[mask], date))
+
+            try:
+                metrics.extend(detector(evaluated.loc[mask], date))
+            except Exception:
+                self.logger.exception(
+                    "Drift detection failed for window %d/%d (date=%s)",
+                    i,
+                    iterations,
+                    date,
+                )
+                raise
 
             self.report_progress(
                 TaskProgress(progress=i / iterations, extra={"iteration": i})
