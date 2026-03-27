@@ -12,7 +12,7 @@ resolution-markers = [
 
 [[package]]
 name = "a4s-plugin-data-evaluation"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "a4s-plugin-interface" },

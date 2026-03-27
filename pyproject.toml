@@ -1,7 +1,7 @@
 [project]
 name = "a4s-plugin-data-evaluation"
 version = "0.1.1"
-description = "A Python plugin for data evaluation implementing data drift and anomaly detection"
+description = "A4S Dashboard plugin for data evaluation implementing data drift and anomaly detection"
 readme = "README.md"
 authors = [
     { name = "Mohammed Fellaji", email = "fellajimohammed@gmail.com" }
@@ -28,3 +28,7 @@ build-backend = "hatchling.build"
 
 [tool.uv.sources]
 a4s-plugin-interface = { git = "https://github.com/lux-ai-factory/a4s-plugin-interface" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
