@@ -20,10 +20,12 @@ class BaseDataPlugin(BaseEvaluationPlugin[ConfigForm]):
     @property
     def logger(self) -> logging.Logger:
         """Return logger from parent class, or create a fallback if not available."""
-        if hasattr(super(), "logger"):
-            return super().logger  # ty: ignore[unresolved-attribute]
+        if (parent_logger := getattr(super(), "logger", None)) is not None:
+            return parent_logger
+
         if self._logger is None:
-            self._logger = logging.getLogger(self.__class__.__name__)
+            self._logger = logging.getLogger(f"a4s_eval.{self.__class__.__name__}")
+
         return self._logger
 
     @logger.setter
