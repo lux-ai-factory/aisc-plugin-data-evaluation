@@ -127,4 +127,4 @@ class TestTabularDriftDetector:
 
         metric_names = [list(m.keys())[0] for m in metrics]
         assert "ratio_features_with_drift" in metric_names
-        assert "Data Drift" in metric_names
+        assert "avg_data_drift" in metric_names

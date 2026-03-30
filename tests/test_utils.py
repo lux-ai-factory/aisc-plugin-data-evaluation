@@ -47,7 +47,7 @@ class TestGroupMetrics:
     def test_group_single_metric(self):
         data = [{"metric1": {"score": 0.9}}]
         result = group_metrics(data)
-        assert result == {"metric1": {"score": [0.9]}}
+        assert result == {"metric1": [{"score": 0.9}]}
 
     def test_group_multiple_same_metrics(self):
         data = [
@@ -55,7 +55,7 @@ class TestGroupMetrics:
             {"metric1": {"score": 0.85}},
         ]
         result = group_metrics(data)
-        assert result == {"metric1": {"score": [0.9, 0.85]}}
+        assert result == {"metric1": [{"score": 0.9}, {"score": 0.85}]}
 
     def test_group_different_metrics(self):
         data = [
@@ -65,8 +65,10 @@ class TestGroupMetrics:
         result = group_metrics(data)
         assert "metric1" in result
         assert "metric2" in result
-        assert result["metric1"] == {"score": [0.9]}
-        assert result["metric2"] == {"score": [0.7]}
+        assert isinstance(result["metric1"], list) and len(result["metric1"]) == 1
+        assert isinstance(result["metric2"], list) and len(result["metric2"]) == 1
+        assert result["metric1"][0] == {"score": 0.9}
+        assert result["metric2"][0] == {"score": 0.7}
 
     def test_group_empty_list(self):
         result = group_metrics([])
@@ -79,7 +81,8 @@ class TestGroupMetrics:
             {"metric1": {"a": 3}},
         ]
         result = group_metrics(data)
-        assert result["metric1"] == {"a": [1, 2, 3]}
+        for item, value in zip(result["metric1"], [1, 2, 3]):
+            assert item["a"] == value
 
     def test_group_multiple_keys(self):
         data = [
@@ -87,4 +90,4 @@ class TestGroupMetrics:
             {"a": {"x": 2, "y": 3}, "b": {"z": 4}},
         ]
         result = group_metrics(data)
-        assert result == {"a": {"x": [1, 2], "y": [3]}, "b": {"z": [4]}}
+        assert result == {"a": [{"x": 1}, {"x": 2, "y": 3}], "b": [{"z": 4}]}

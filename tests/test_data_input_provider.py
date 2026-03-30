@@ -28,30 +28,18 @@ class TestDataFrameProvider:
     def test_read_csv_file(self, sample_csv_bytes):
         provider = DataFrameProvider(sample_csv_bytes)
         data = provider.get_data()
-        assert "test" in data
-        assert isinstance(data["test"], pd.DataFrame)
-        assert len(data["test"]) == 10
-
-    def test_read_two_files(self, sample_csv_bytes):
-        provider = DataFrameProvider(
-            [sample_csv_bytes, sample_csv_bytes]  # ty: ignore[invalid-argument-type]
-        )
-        data = provider.get_data()
-        assert "train" in data
-        assert "test" in data
+        assert isinstance(data, pd.DataFrame)
+        assert len(data) == 10
 
     def test_invalid_file_returns_dataframe(self):
         # CSV parser is very lenient - even random bytes may parse
         # This test just verifies that the provider handles various inputs
         provider = DataFrameProvider(b"col1,col2\n1,2\n3,4")
         data = provider.get_data()
-        assert "test" in data
-        assert isinstance(data["test"], pd.DataFrame)
+        assert isinstance(data, pd.DataFrame)
 
     def test_iter_method(self, sample_csv_bytes):
-        provider = DataFrameProvider(
-            [sample_csv_bytes, sample_csv_bytes]  # ty: ignore[invalid-argument-type]
-        )
+        provider = DataFrameProvider(sample_csv_bytes)
         batches = list(provider.iter("date", "7D", "7D", "1D"))
         assert len(batches) > 0
         for date, mask in batches:
