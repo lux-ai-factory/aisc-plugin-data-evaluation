@@ -187,7 +187,7 @@ src/a4s_plugin_data_evaluation/
 | Verification type | Technical test |
 | Project | [a4s-plugin-data-evaluation](https://github.com/lux-ai-factory/a4s-plugin-data-evaluation) |
 | Branch | main |
-| Version | 0.1.1 |
+| Version | 0.1.2 |
 | Project maturity | Deployed |
 | Scientific reference | - |
 | Verification targets | [Data Drift Detection] [Anomaly Detection] [Data Quality] [Distribution Analysis] |
