@@ -31,6 +31,8 @@ class DataAnomalyPlugin(BaseDataPlugin):
         return "flag"
 
     def evaluate(self, config_data: dict):
+        import pandas as pd
+
         config = self.validate_config_form_data(config_data)
         self.logger.info("Starting anomaly evaluation")
         self.logger.info("Parsed %d features from config", len(config.features))
@@ -43,16 +45,29 @@ class DataAnomalyPlugin(BaseDataPlugin):
         features = [
             f for f in config.features if f.name not in (target_col, date_feature)
         ]
+
+        if not features:
+            self.logger.warning(
+                "No input features found after excluding target and date"
+            )
+
         self.logger.debug(
             "Evaluating %d features (excluding target and date)", len(features)
         )
 
-        datasets = self.get_dataset()
+        try:
+            reference = self.get_input_data("reference-dataset")
+        except Exception:
+            self.logger.exception("Failed to load reference dataset")
+            raise
+        assert isinstance(reference, pd.DataFrame)
 
-        evaluated = datasets["test"]
-        reference = datasets.get("train")
-        if reference is None:
-            raise ValueError("Reference dataset is missing.")
+        try:
+            evaluated = self.get_input_data("evaluated-dataset")
+        except Exception:
+            self.logger.exception("Failed to load evaluated dataset")
+            raise
+        assert isinstance(evaluated, pd.DataFrame)
 
         self.logger.debug(
             "Reference shape: %s, Evaluated shape: %s", reference.shape, evaluated.shape
@@ -61,15 +76,22 @@ class DataAnomalyPlugin(BaseDataPlugin):
         detector = TabularAnomalyDetector()
         detector.fit(features, reference)
 
-        assert isinstance(self.dataset_input_provider, DataFrameProvider)
-        dates_masks = list(
-            self.dataset_input_provider.iter(date_feature, frequency, window_size)
-        )
+        dataset_provider = self._input_provider_instances.get("evaluated-dataset")
+        assert isinstance(dataset_provider, DataFrameProvider)
+        dates_masks = list(dataset_provider.iter(date_feature, frequency, window_size))
         iterations = len(dates_masks)
         self.logger.info("Processing %d time windows", iterations)
 
         metrics = []
         for i, (date, mask) in enumerate(dates_masks, start=1):
+            if mask.sum() == 0:
+                self.logger.warning(
+                    "Window %d/%d (date=%s) has no samples, skipping",
+                    i,
+                    iterations,
+                    date,
+                )
+                continue
             self.logger.debug(
                 "Processing window %d/%d (date=%s, samples=%d)",
                 i,
@@ -77,7 +99,18 @@ class DataAnomalyPlugin(BaseDataPlugin):
                 date,
                 mask.sum(),
             )
-            metrics.extend(detector(evaluated.loc[mask], date))
+
+            try:
+                metrics.extend(detector(evaluated.loc[mask], date))
+            except Exception:
+                self.logger.exception(
+                    "Anomaly detection failed for window %d/%d (date=%s)",
+                    i,
+                    iterations,
+                    date,
+                )
+                raise
+
             self.report_progress(
                 TaskProgress(progress=i / iterations, extra={"iteration": i})
             )

@@ -111,7 +111,7 @@ class TabularDriftDetector:
                     )
                 },
                 {
-                    "Data Drift": dict(
+                    "avg_data_drift": dict(
                         score=avg_data_drift,
                         time=date,
                         description=None,

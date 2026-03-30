@@ -35,6 +35,9 @@ FORM_UI_SCHEMA: dict[str, dict[str, Any]] = {
 
 
 class ConfigForm(BaseModel):
+    target_feature: str | None = Field(default=None, title="Target Feature")
+    date_feature: str | None = Field(default=None, title="Date Feature")
+
     frequency: str = Field(
         default="",
         title="Frequency",
@@ -49,19 +52,16 @@ class ConfigForm(BaseModel):
         examples=["90 days", "3 months"],
     )
 
-    target_feature: str | None = Field(default=None, title="Target Feature")
-    date_feature: str | None = Field(default=None, title="Date Feature")
-
     features: list[Feature] = Field(
         default_factory=list, description="List of features to use for prediction"
     )
 
     @model_validator(mode="after")
     def validate_special_features(self) -> "ConfigForm":
-        self.frequency = self.frequency
-        self.window_size = self.window_size
         self.target_feature = self.target_feature or None
         self.date_feature = self.date_feature or None
+        self.frequency = self.frequency
+        self.window_size = self.window_size
 
         if self.target_feature is None:
             return self
