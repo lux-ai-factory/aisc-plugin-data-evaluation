@@ -25,7 +25,8 @@ Both plugins take a reference dataset (training data) and an evaluated dataset (
 from a4s_plugin_data_evaluation import DataDriftPlugin
 
 plugin = DataDriftPlugin()
-plugin.set_dataset_input_provider([train_data_bytes, test_data_bytes])
+plugin.set_input_content("reference-dataset", train_data_bytes)
+plugin.set_input_content("evaluated-dataset", test_data_bytes)
 
 results = plugin.evaluate({
     "features": [...],
