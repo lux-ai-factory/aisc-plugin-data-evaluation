@@ -5,11 +5,14 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from a4s_plugin_data_evaluation.data_input_provider import DataFrameProvider
+from a4s_plugin_data_evaluation.data_input_provider import (
+    DataFrameProvider,
+    dataframe_iter,
+)
 
 
 class TestDataFrameProvider:
-    """Tests for DataFrameProvider class."""
+    """Tests for DataFrameProvider class and dataframe_iter."""
 
     @pytest.fixture
     def sample_csv_bytes(self):
@@ -40,7 +43,8 @@ class TestDataFrameProvider:
 
     def test_iter_method(self, sample_csv_bytes):
         provider = DataFrameProvider(sample_csv_bytes)
-        batches = list(provider.iter("date", "7D", "7D", "1D"))
+        data = provider.get_data()
+        batches = list(dataframe_iter(data, "date", "7D", "7D", "1D"))
         assert len(batches) > 0
         for date, mask in batches:
             assert isinstance(mask, pd.Series)

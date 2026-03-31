@@ -22,16 +22,15 @@ class DataFrameProvider(BaseInputProvider):
             except Exception as e:
                 raise ValueError("File is neither a valid Parquet nor CSV.") from e
 
-    def iter(
-        self,
-        date_feature: str | None,
-        frequency: str | None,
-        window_size: str | None,
-        date_round: str | None = "1 D",
-    ) -> Iterator[tuple[datetime | None, pd.Series]]:
-        if date_feature is not None:
-            self._data[date_feature] = pd.to_datetime(self._data[date_feature])
 
-        yield from DateIterator(
-            self._data, date_feature, frequency, window_size, date_round
-        )
+def dataframe_iter(
+    dataframe: pd.DataFrame,
+    date_feature: str | None,
+    frequency: str | None,
+    window_size: str | None,
+    date_round: str | None = "1 D",
+) -> Iterator[tuple[datetime | None, pd.Series]]:
+    if date_feature is not None:
+        dataframe[date_feature] = pd.to_datetime(dataframe[date_feature])
+
+    yield from DateIterator(dataframe, date_feature, frequency, window_size, date_round)

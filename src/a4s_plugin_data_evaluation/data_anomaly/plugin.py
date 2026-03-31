@@ -2,7 +2,7 @@ from a4s_plugin_interface import TaskProgress
 from a4s_plugin_interface.models.measure import MetricVisualization, ChartType
 
 from ..base_data_plugin import BaseDataPlugin
-from ..data_input_provider import DataFrameProvider
+from ..data_input_provider import dataframe_iter
 from ..utils import add_metrics, group_metrics
 from .anomaly_detector import TabularAnomalyDetector
 
@@ -76,9 +76,9 @@ class DataAnomalyPlugin(BaseDataPlugin):
         detector = TabularAnomalyDetector()
         detector.fit(features, reference)
 
-        dataset_provider = self._input_provider_instances.get("evaluated-dataset")
-        assert isinstance(dataset_provider, DataFrameProvider)
-        dates_masks = list(dataset_provider.iter(date_feature, frequency, window_size))
+        dates_masks = list(
+            dataframe_iter(evaluated, date_feature, frequency, window_size)
+        )
         iterations = len(dates_masks)
         self.logger.info("Processing %d time windows", iterations)
 

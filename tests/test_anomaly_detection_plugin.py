@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from a4s_plugin_data_evaluation.data_anomaly.plugin import DataAnomalyPlugin
+from a4s_plugin_data_evaluation import DataAnomalyPlugin
 from a4s_plugin_data_evaluation.utils import Feature, FeatureType
 
 
