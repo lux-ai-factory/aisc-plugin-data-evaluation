@@ -1,14 +1,13 @@
 import copy
-from abc import abstractmethod
 from typing import Any
+from abc import abstractmethod
 
-from a4s_plugin_interface import InputType
-from a4s_plugin_interface.decorators.evaluation_input import evaluation_input
-from a4s_plugin_interface.base_evaluation_plugin import (
+from a4s_plugin_interface import (
     BaseEvaluationPlugin,
     PluginFeatureFlags,
+    InputType,
+    evaluation_input,
 )
-from a4s_plugin_interface.models.measure import Measure
 
 from .utils import Feature, FeatureType
 from .config_form import ConfigForm, FORM_UI_SCHEMA
@@ -179,5 +178,5 @@ class BaseDataPlugin(BaseEvaluationPlugin[ConfigForm]):
         return form_data, config_schema, ui_schema
 
     @abstractmethod
-    def evaluate(self, config_data: dict) -> list[Measure]:
+    def evaluate(self, config_data: dict[str, Any]) -> dict[str, dict[str, list[Any]]]:
         raise NotImplementedError

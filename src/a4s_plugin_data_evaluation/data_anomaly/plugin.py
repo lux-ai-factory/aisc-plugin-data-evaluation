@@ -1,3 +1,5 @@
+from typing import Any
+
 from a4s_plugin_interface import TaskProgress
 from a4s_plugin_interface.models.measure import MetricVisualization, ChartType
 
@@ -30,7 +32,7 @@ class DataAnomalyPlugin(BaseDataPlugin):
     def display_icon(self) -> str:
         return "flag"
 
-    def evaluate(self, config_data: dict):
+    def evaluate(self, config_data: dict[str, Any]) -> dict[str, dict[str, list[Any]]]:
         import pandas as pd
 
         config = self.validate_config_form_data(config_data)
