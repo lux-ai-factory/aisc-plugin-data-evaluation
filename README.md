@@ -179,10 +179,12 @@ src/a4s_plugin_data_evaluation/
 
 ## Plugin Metadata
 
+### Data Drift Plugin
+
 | Field | Value |
 |-------|-------|
-| Name | A4S Data Evaluation Plugin |
-| Description | A Python plugin for data evaluation, implementing data drift detection and anomaly detection using statistical methods. Supports PSI, KS test, Wasserstein distance, Chi-squared test, Jensen-Shannon divergence for drift detection, and constraint violations, new/missing categories, distribution outliers for anomaly detection. |
+| Name | Data Drift |
+| Description | Detects distribution drift between datasets using PSI, KS test, Wasserstein distance, Chi-squared test, and Jensen-Shannon divergence. |
 | License | - |
 | Verification type | Technical test |
 | Project | [a4s-plugin-data-evaluation](https://github.com/lux-ai-factory/a4s-plugin-data-evaluation) |
@@ -190,5 +192,21 @@ src/a4s_plugin_data_evaluation/
 | Version | 0.1.2 |
 | Project maturity | Deployed |
 | Scientific reference | - |
-| Verification targets | [Data Drift Detection] [Anomaly Detection] [Data Quality] [Distribution Analysis] |
+| Verification targets | [Data Drift Detection] [Distribution Analysis] |
+| Sector | [AI/ML] [Data Science] [MLOps] |
+
+### Data Anomaly Plugin
+
+| Field | Value |
+|-------|-------|
+| Name | Data Anomaly |
+| Description | Detects anomalies including constraint violations, new/missing categories, and distribution outliers. |
+| License | - |
+| Verification type | Technical test |
+| Project | [a4s-plugin-data-evaluation](https://github.com/lux-ai-factory/a4s-plugin-data-evaluation) |
+| Branch | main |
+| Version | 0.1.2 |
+| Project maturity | Deployed |
+| Scientific reference | - |
+| Verification targets | [Anomaly Detection] [Data Quality] |
 | Sector | [AI/ML] [Data Science] [MLOps] |
