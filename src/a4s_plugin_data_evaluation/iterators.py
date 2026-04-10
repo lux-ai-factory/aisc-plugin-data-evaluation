@@ -29,6 +29,7 @@ def get_date_batches(
         batch_end = start_date + pd.Timedelta(
             days=1
         )  # Next day to include all data from start_date
+        assert isinstance(batch_end, pd.Timestamp)
         return [(batch_start, batch_end)]
 
     # Round dates if specified

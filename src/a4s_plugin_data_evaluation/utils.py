@@ -39,7 +39,7 @@ class Feature(BaseModel):
 
 def group_metrics(
     dicts: list[dict[str, dict[str, Any]]],
-) -> dict[str, dict[str, list[Any]]]:
+) -> dict[str, list[dict[str, Any]]]:
     """Group a list of metric dictionaries by metric name into a single dictionary.
 
     Args:
