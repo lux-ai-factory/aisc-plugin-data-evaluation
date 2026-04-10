@@ -117,8 +117,18 @@ class DataAnomalyPlugin(BaseDataPlugin):
                 TaskProgress(progress=i / iterations, extra={"iteration": i})
             )
 
+        gr_metrics = group_metrics(metrics)
+
+        # save artifact
+        df_artifact = pd.DataFrame(
+            [{"metric": metric, **values} for metric, values in gr_metrics.items()]
+        )
+        self.upload_artifact(
+            "results.csv", df_artifact.to_csv(index=False).encode("utf-8")
+        )
+
         self.logger.info("Anomaly evaluation completed")
-        return group_metrics(metrics)
+        return gr_metrics
 
     def get_metric_visualizations(self, config_data: dict) -> list[MetricVisualization]:
         # config = self.validate_config_form_data(config_data)
