@@ -6,8 +6,7 @@ from typing import Any, Protocol, TypeVar
 
 from pydantic import BaseModel, Field, field_serializer
 
-from a4s_plugin_interface import metric
-from a4s_plugin_interface.models.measure import Measure
+from vera_plugin_interface import Measure, metric
 
 
 class _HasMetricNames(Protocol):
