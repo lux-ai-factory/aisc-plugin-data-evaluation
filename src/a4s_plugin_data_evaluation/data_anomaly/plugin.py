@@ -121,7 +121,11 @@ class DataAnomalyPlugin(BaseDataPlugin):
 
         # save artifact
         df_artifact = pd.DataFrame(
-            [{"metric": metric, **values} for metric, values in gr_metrics.items()]
+            [
+                {"metric": metric, **value}
+                for metric, values in gr_metrics.items()
+                for value in values
+            ]
         )
         self.upload_artifact(
             "results.csv", df_artifact.to_csv(index=False).encode("utf-8")
