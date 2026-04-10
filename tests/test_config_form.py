@@ -2,8 +2,8 @@
 
 import pytest
 
-from a4s_plugin_data_evaluation.config_form import ConfigForm, FORM_UI_SCHEMA
-from a4s_plugin_data_evaluation.utils import Feature, FeatureType
+from vera_plugin_data_evaluation.config_form import ConfigForm, FORM_UI_SCHEMA
+from vera_plugin_data_evaluation.utils import Feature, FeatureType
 
 
 class TestConfigForm:

@@ -1,42 +1,46 @@
 from typing import Any
 
-from a4s_plugin_interface import TaskProgress
-from a4s_plugin_interface.models.measure import MetricVisualization, ChartType
+from vera_plugin_interface import TaskProgress, MetricVisualization, ChartType
 
 from ..base_data_plugin import BaseDataPlugin
 from ..data_input_provider import dataframe_iter
 from ..utils import add_metrics, group_metrics
-from .anomaly_detector import TabularAnomalyDetector
+from .drift_detector import TabularDriftDetector
 
 
 @add_metrics
-class DataAnomalyPlugin(BaseDataPlugin):
-    plugin_name = "Data Anomaly"
+class DataDriftPlugin(BaseDataPlugin):
+    plugin_name = "Data Drift"
 
-    anomaly_metric_names = [
-        "New Categories",
-        "Missing Categories",
-        "Upper Constraint Violations",
-        "Lower Constraint Violations",
-        "Distribution Outlier",
-        "Anomaly Pass",
-        "Anomaly Low",
-        "Anomaly Severe",
+    drift_metric_names = [
+        "avg_data_drift",
+        "Number of Drifted Features",
+        "data_drift",
+        "wasserstein_distance",
+        "psi",
+        "psi_chi2_p_value",
+        "ks_statistic",
+        "ks_pvalue",
+        "jensenshannon_distance",
+        "chi2_statistic",
+        "chi2_pvalue",
+        "drift_detected",
+        "ratio_features_with_drift",
     ]
 
     @classmethod
     def metric_names(cls):
-        return cls.anomaly_metric_names
+        return cls.drift_metric_names
 
     @property
     def display_icon(self) -> str:
-        return "flag"
+        return "alt_route"
 
     def evaluate(self, config_data: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
         import pandas as pd
 
         config = self.validate_config_form_data(config_data)
-        self.logger.info("Starting anomaly evaluation")
+        self.logger.info("Starting drift evaluation")
         self.logger.info("Parsed %d features from config", len(config.features))
 
         target_col = config.target_feature
@@ -75,7 +79,7 @@ class DataAnomalyPlugin(BaseDataPlugin):
             "Reference shape: %s, Evaluated shape: %s", reference.shape, evaluated.shape
         )
 
-        detector = TabularAnomalyDetector()
+        detector = TabularDriftDetector()
         detector.fit(features, reference)
 
         dates_masks = list(
@@ -106,7 +110,7 @@ class DataAnomalyPlugin(BaseDataPlugin):
                 metrics.extend(detector(evaluated.loc[mask], date))
             except Exception:
                 self.logger.exception(
-                    "Anomaly detection failed for window %d/%d (date=%s)",
+                    "Drift detection failed for window %d/%d (date=%s)",
                     i,
                     iterations,
                     date,
@@ -131,31 +135,23 @@ class DataAnomalyPlugin(BaseDataPlugin):
             "results.csv", df_artifact.to_csv(index=False).encode("utf-8")
         )
 
-        self.logger.info("Anomaly evaluation completed")
+        self.logger.info("Drift evaluation completed")
         return gr_metrics
 
     def get_metric_visualizations(self, config_data: dict) -> list[MetricVisualization]:
-        # config = self.validate_config_form_data(config_data)
+        config = self.validate_config_form_data(config_data)
 
         table = MetricVisualization(
             chart_type=ChartType.TABLE, metrics=self.get_metrics()
         )
 
-        pie_metrics = [
-            metric_name
-            for metric_name in self.metric_names()
-            if "Anomaly" in metric_name
+        metrics = self.metric_names()
+        is_multivalued = config.date_feature and config.frequency and config.window_size
+        chart_type = ChartType.LINE if is_multivalued else ChartType.BARS
+
+        charts = [
+            MetricVisualization(chart_type=chart_type, metrics=[metric])
+            for metric in metrics
         ]
 
-        piechart = MetricVisualization(
-            chart_type=ChartType.PIE,
-            metrics=pie_metrics,
-        )
-
-        # NOTE: add this only if time series ...
-        bars = MetricVisualization(
-            chart_type=ChartType.BARS,
-            metrics=pie_metrics,
-        )
-
-        return [table, piechart, bars]
+        return [table, *charts]

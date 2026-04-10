@@ -5,7 +5,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from a4s_plugin_data_evaluation.data_input_provider import (
+from vera_plugin_data_evaluation.data_input_provider import (
     DataFrameProvider,
     dataframe_iter,
 )

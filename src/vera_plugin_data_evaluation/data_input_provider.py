@@ -3,7 +3,7 @@ from collections.abc import Iterator
 from datetime import datetime
 
 import pandas as pd
-from a4s_plugin_interface.input_providers.base_input_provider import BaseInputProvider
+from vera_plugin_interface import BaseInputProvider
 
 from .iterators import DateIterator
 

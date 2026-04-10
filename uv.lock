@@ -11,50 +11,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "a4s-plugin-data-evaluation"
-version = "0.1.2"
-source = { editable = "." }
-dependencies = [
-    { name = "a4s-plugin-interface" },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "scipy" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "ruff" },
-    { name = "ty" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "a4s-plugin-interface", git = "https://github.com/lux-ai-factory/a4s-plugin-interface" },
-    { name = "numpy", specifier = ">=2.0.0" },
-    { name = "pandas", specifier = ">=2.2.0" },
-    { name = "scipy", specifier = ">=1.13.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pre-commit", specifier = ">=4.2.0" },
-    { name = "pytest", specifier = ">=8.3.5" },
-    { name = "ruff", specifier = ">=0.11.12" },
-    { name = "ty", specifier = ">=0.0.25" },
-]
-
-[[package]]
-name = "a4s-plugin-interface"
-version = "0.2.1"
-source = { git = "https://github.com/lux-ai-factory/a4s-plugin-interface#148c0a219619a358f26df380cdcc55d836b43859" }
-dependencies = [
-    { name = "pydantic" },
-    { name = "rich" },
-]
-
-[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -645,6 +601,50 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/19/f5/cd531b2d15a671a40c0f66cf06bc3570a12cd56eef98960068ebbad1bf5a/tzdata-2026.1.tar.gz", hash = "sha256:67658a1903c75917309e753fdc349ac0efd8c27db7a0cb406a25be4840f87f98", size = 197639, upload-time = "2026-04-03T11:25:22.002Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b0/70/d460bd685a170790ec89317e9bd33047988e4bce507b831f5db771e142de/tzdata-2026.1-py2.py3-none-any.whl", hash = "sha256:4b1d2be7ac37ceafd7327b961aa3a54e467efbdb563a23655fbfe0d39cfc42a9", size = 348952, upload-time = "2026-04-03T11:25:20.313Z" },
+]
+
+[[package]]
+name = "vera-plugin-data-evaluation"
+version = "0.2.0"
+source = { editable = "." }
+dependencies = [
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "scipy" },
+    { name = "vera-plugin-interface" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "ruff" },
+    { name = "ty" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "numpy", specifier = ">=2.0.0" },
+    { name = "pandas", specifier = ">=2.2.0" },
+    { name = "scipy", specifier = ">=1.13.0" },
+    { name = "vera-plugin-interface", git = "https://github.com/lux-ai-factory/vera-plugin-interface" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pre-commit", specifier = ">=4.2.0" },
+    { name = "pytest", specifier = ">=8.3.5" },
+    { name = "ruff", specifier = ">=0.11.12" },
+    { name = "ty", specifier = ">=0.0.25" },
+]
+
+[[package]]
+name = "vera-plugin-interface"
+version = "0.2.1"
+source = { git = "https://github.com/lux-ai-factory/vera-plugin-interface#7a97a32f921c386b29c40091ecc52d5b635f8420" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "rich" },
 ]
 
 [[package]]
