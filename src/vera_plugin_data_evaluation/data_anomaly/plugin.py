@@ -12,6 +12,8 @@ from .anomaly_detector import TabularAnomalyDetector
 class DataAnomalyPlugin(BaseDataPlugin):
     plugin_name = "Data Anomaly"
 
+    ui_icon = "flag"
+
     anomaly_metric_names = [
         "New Categories",
         "Missing Categories",
@@ -26,10 +28,6 @@ class DataAnomalyPlugin(BaseDataPlugin):
     @classmethod
     def metric_names(cls):
         return cls.anomaly_metric_names
-
-    @property
-    def display_icon(self) -> str:
-        return "flag"
 
     def evaluate(self, config_data: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
         import pandas as pd

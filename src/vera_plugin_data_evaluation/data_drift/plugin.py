@@ -12,6 +12,8 @@ from .drift_detector import TabularDriftDetector
 class DataDriftPlugin(BaseDataPlugin):
     plugin_name = "Data Drift"
 
+    ui_icon = "alt_route"
+
     drift_metric_names = [
         "avg_data_drift",
         "Number of Drifted Features",
@@ -31,10 +33,6 @@ class DataDriftPlugin(BaseDataPlugin):
     @classmethod
     def metric_names(cls):
         return cls.drift_metric_names
-
-    @property
-    def display_icon(self) -> str:
-        return "alt_route"
 
     def evaluate(self, config_data: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
         import pandas as pd
