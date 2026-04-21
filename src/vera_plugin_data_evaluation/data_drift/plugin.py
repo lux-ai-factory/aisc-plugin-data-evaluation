@@ -43,8 +43,8 @@ class DataDriftPlugin(BaseDataPlugin):
 
         target_col = config.target_feature
         date_feature = config.date_feature
-        frequency = config.frequency
-        window_size = config.window_size
+        frequency = config.frequency.strip()
+        window_size = config.window_size.strip()
 
         features = [
             f for f in config.features if f.name not in (target_col, date_feature)
@@ -146,7 +146,11 @@ class DataDriftPlugin(BaseDataPlugin):
         )
 
         metrics = self.metric_names()
-        is_multivalued = config.date_feature and config.frequency and config.window_size
+        is_multivalued = (
+            config.date_feature
+            and config.frequency.strip()
+            and config.window_size.strip()
+        )
         chart_type = ChartType.LINE if is_multivalued else ChartType.BARS
 
         charts = [

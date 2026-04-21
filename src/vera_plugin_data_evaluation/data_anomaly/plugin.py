@@ -38,8 +38,8 @@ class DataAnomalyPlugin(BaseDataPlugin):
 
         target_col = config.target_feature
         date_feature = config.date_feature
-        frequency = config.frequency
-        window_size = config.window_size
+        frequency = config.frequency.strip()
+        window_size = config.window_size.strip()
 
         features = [
             f for f in config.features if f.name not in (target_col, date_feature)
