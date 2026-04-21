@@ -1,6 +1,6 @@
 from typing import Any
 
-from vera_plugin_interface import TaskProgress, MetricVisualization, ChartType
+from vera_plugin_interface import MetricVisualization, ChartType
 
 from ..base_data_plugin import BaseDataPlugin
 from ..data_input_provider import dataframe_iter
@@ -81,10 +81,10 @@ class DataAnomalyPlugin(BaseDataPlugin):
         iterations = len(dates_masks)
         self.logger.info("Processing %d time windows", iterations)
 
-        self.report_progress(TaskProgress(progress=0, extra={"iteration": 0}))
-
         metrics = []
-        for i, (date, mask) in enumerate(dates_masks, start=1):
+        for i, (date, mask) in enumerate(
+            self.iter_with_progress(dates_masks, total=iterations), start=1
+        ):
             if mask.sum() == 0:
                 self.logger.warning(
                     "Window %d/%d (date=%s) has no samples, skipping",
@@ -111,10 +111,6 @@ class DataAnomalyPlugin(BaseDataPlugin):
                     date,
                 )
                 raise
-
-            self.report_progress(
-                TaskProgress(progress=i / iterations, extra={"iteration": i})
-            )
 
         gr_metrics = group_metrics(metrics)
 
