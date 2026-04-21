@@ -86,6 +86,8 @@ class DataDriftPlugin(BaseDataPlugin):
         iterations = len(dates_masks)
         self.logger.info("Processing %d time windows", iterations)
 
+        self.report_progress(TaskProgress(progress=0, extra={"iteration": 0}))
+
         metrics = []
         for i, (date, mask) in enumerate(dates_masks, start=1):
             if mask.sum() == 0:
