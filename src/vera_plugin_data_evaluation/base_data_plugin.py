@@ -185,12 +185,35 @@ class BaseDataPlugin(BaseEvaluationPlugin[ConfigForm]):
 
         return form_data, config_schema, ui_schema
 
-    def iter_with_progress(
+    def progress_bar(
         self,
         iterable: Iterable[T],
+        *,
         total: int | None = None,
+        desc: str | None = None,
         start: int = 1,
-    ) -> Iterator[T]:
+        show_index: bool = False,
+    ) -> Iterator[tuple[int, T] | T]:
+        """Iterate items while emitting progress updates.
+
+        The generator reports progress through ``self.report_progress`` using
+        ``TaskProgress``. By default, it emits an initial event before the first
+        item (``start - 1``) and then emits after each yielded item.
+
+        Args:
+            iterable: Source items to iterate over.
+            total: Total number of items. If omitted, it is inferred from
+                ``iterable`` (materializing it if needed).
+            desc: Optional label included in the progress payload.
+            start: Starting iteration index used by ``enumerate``.
+            show_index: If ``True``, yield ``(index, item)`` tuples. Otherwise,
+                yield items only.
+
+        Yields:
+            Either each item from ``iterable`` or ``(index, item)`` pairs,
+            depending on ``show_index``.
+        """
+        # infer total if not provided
         if total is None:
             if isinstance(iterable, Sized):
                 total = len(iterable)
@@ -201,25 +224,35 @@ class BaseDataPlugin(BaseEvaluationPlugin[ConfigForm]):
         if total == 0:
             return
 
-        report_progress = self.report_progress
+        _report_progress = self.report_progress
 
-        if start > 0:
-            report_progress(
-                TaskProgress(
-                    progress=(start - 1) / total,
-                    extra={"iteration": start - 1},
-                )
-            )
+        def emit(i: int):
+            progress = min(i / total, 1.0)
+            payload: dict = {
+                "iteration": i,
+                "total": total,
+            }
+            if desc:
+                payload["desc"] = desc
 
-        for i, x in enumerate(iterable, start=start):
-            yield x
-            progress = i / total if i <= total else 1.0
-            report_progress(
+            _report_progress(
                 TaskProgress(
                     progress=progress,
-                    extra={"iteration": i},
+                    extra=payload,
                 )
             )
+
+        if start > 0:
+            emit(start - 1)
+        else:
+            start = 0
+
+        for i, item in enumerate(iterable, start=start):
+            if show_index:
+                yield i, item
+            else:
+                yield item
+            emit(i)
 
     @abstractmethod
     def evaluate(self, config_data: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
