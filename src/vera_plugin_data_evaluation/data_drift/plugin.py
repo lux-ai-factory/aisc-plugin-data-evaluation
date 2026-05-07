@@ -20,7 +20,6 @@ class DataDriftPlugin(BaseDataPlugin):
         "data_drift",
         "wasserstein_distance",
         "psi",
-        "psi_chi2_p_value",
         "ks_statistic",
         "ks_pvalue",
         "jensenshannon_distance",
