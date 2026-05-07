@@ -13,6 +13,28 @@ from ..utils import Feature, FeatureType
 logger = logging.getLogger(__name__)
 
 
+def binned_probabilities(
+    x: np.ndarray,
+    bin_edges: np.ndarray,
+    eps: float = 1e-6,
+) -> np.ndarray:
+    """
+    Convert a single series into a probability distribution using fixed bin edges.
+    """
+
+    x = np.asarray(x)
+
+    counts, _ = np.histogram(x, bins=bin_edges)
+
+    probs = counts / max(counts.sum(), 1)
+
+    # use Laplace smoothing
+    probs = probs + eps
+    probs = probs / probs.sum()
+
+    return probs
+
+
 class TabularDriftDetector:
     reference: pd.DataFrame | None
     features: list[Feature]
@@ -178,36 +200,18 @@ class TabularDriftDetector:
         return []
 
     def _psi(
-        self, ref: pd.Series, eval: pd.Series, bin_edges: np.ndarray
-    ) -> tuple[float, float]:
-        from scipy.stats import chi2
-
-        ref_counts, _ = np.histogram(ref, bins=bin_edges)
-        eval_counts, _ = np.histogram(eval, bins=bin_edges)
-
-        ref_perc = ref_counts / len(ref)
-        eval_perc = eval_counts / len(eval)
-
-        ref_perc = np.where(ref_perc == 0, 1e-6, ref_perc)
-        eval_perc = np.where(eval_perc == 0, 1e-6, eval_perc)
-
-        psi = float(np.sum((ref_perc - eval_perc) * np.log(ref_perc / eval_perc)))
-
-        chi_stat = 2 * len(eval) * psi
-        # NOTE: drift detected if p_value < 0.05
-        psi_pvalue = float(1 - chi2.cdf(chi_stat, len(ref_counts) - 1))
-
-        return psi, psi_pvalue
+        self, ref_probs: np.ndarray, eval_probs: np.ndarray, bin_edges: np.ndarray
+    ) -> float:
+        return float(np.sum((ref_probs - eval_probs) * np.log(ref_probs / eval_probs)))
 
     def _numeric_drift(
         self, ref: pd.Series, eval: pd.Series, col: str
     ) -> dict[str, Any]:
+        from scipy.spatial.distance import jensenshannon
         from scipy.stats import ks_2samp, wasserstein_distance
 
         ref = ref.dropna()
         eval = eval.dropna()
-
-        psi, psi_p = self._psi(ref, eval, self.bins[col])
 
         ks_stat, ks_p = ks_2samp(ref, eval)
 
@@ -216,9 +220,16 @@ class TabularDriftDetector:
         # Standardized mean difference
         smd = abs(np.mean(ref) - np.mean(eval)) / (np.std(ref) + 1e-6)
 
+        ref_prob = binned_probabilities(ref.to_numpy(), self.bins[col], eps=1e-6)
+        eval_prob = binned_probabilities(eval.to_numpy(), self.bins[col], eps=1e-6)
+
+        psi = self._psi(ref_prob, eval_prob, self.bins[col])
+        js = jensenshannon(ref_prob, eval_prob, base=2) ** 2
+
+        # TODO: maybe use js as standard data_drift measure
         return {
             "psi": psi,
-            "psi_chi2_p_value": psi_p,
+            "jensenshannon_distance": js,
             "ks_statistic": ks_stat,
             "ks_pvalue": ks_p,
             "wasserstein_distance": wass,
