@@ -90,7 +90,7 @@ class DataDriftPlugin(BaseDataPlugin):
             dates_masks,
             total=iterations,
             start=1,
-            show_index=True,
+            with_index=True,
             desc="Data Drift metrics",
         ):
             if mask.sum() == 0:

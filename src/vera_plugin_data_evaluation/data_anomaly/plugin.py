@@ -86,7 +86,7 @@ class DataAnomalyPlugin(BaseDataPlugin):
             dates_masks,
             total=iterations,
             start=1,
-            show_index=True,
+            with_index=True,
             desc="Data Anomaly metrics",
         ):
             if mask.sum() == 0:
