@@ -2,8 +2,8 @@
 
 import pytest
 
-from vera_plugin_data_evaluation.config_form import ConfigForm, FORM_UI_SCHEMA
-from vera_plugin_data_evaluation.utils import Feature, FeatureType
+from data_monitor.config_form import ConfigForm, FORM_UI_SCHEMA
+from data_monitor.utils import Feature, FeatureType
 
 
 class TestConfigForm:

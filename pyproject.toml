@@ -1,5 +1,5 @@
 [project]
-name = "vera-plugin-data-evaluation"
+name = "data-monitor"
 version = "0.2.0"
 description = "VERA Dashboard plugin for data evaluation implementing data drift and anomaly detection"
 readme = "README.md"
