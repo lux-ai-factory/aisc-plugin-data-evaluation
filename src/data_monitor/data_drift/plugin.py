@@ -140,11 +140,11 @@ class DataDriftPlugin(BaseDataPlugin):
     def get_metric_visualizations(self, config_data: dict) -> list[MetricVisualization]:
         config = self.validate_config_form_data(config_data)
 
-        table = MetricVisualization(
-            chart_type=ChartType.TABLE, metrics=self.get_metrics()
-        )
+        # table = MetricVisualization(
+        #     chart_type=ChartType.TABLE, metrics=self.get_metrics()
+        # )
 
-        metrics = self.metric_names()
+        # metrics = self.metric_names()
         is_multivalued = (
             config.date_feature
             and config.frequency.strip()
@@ -152,9 +152,7 @@ class DataDriftPlugin(BaseDataPlugin):
         )
         chart_type = ChartType.LINE if is_multivalued else ChartType.BARS
 
-        charts = [
+        return [
             MetricVisualization(chart_type=chart_type, metrics=[metric])
-            for metric in metrics
+            for metric in ["data_drift", "Number of Drifted Features"]
         ]
-
-        return [table, *charts]
