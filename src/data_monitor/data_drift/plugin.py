@@ -154,5 +154,5 @@ class DataDriftPlugin(BaseDataPlugin):
 
         return [
             MetricVisualization(chart_type=chart_type, metrics=[metric])
-            for metric in ["data_drift", "Number of Drifted Features"]
+            for metric in ["avg_data_drift", "Number of Drifted Features"]
         ]
