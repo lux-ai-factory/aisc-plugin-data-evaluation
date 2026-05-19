@@ -67,14 +67,15 @@ class TestTabularDriftDetector:
     def test_fit_numeric_features(self, numeric_features, reference_df):
         detector = TabularDriftDetector()
         detector.fit(numeric_features, reference_df)
-        assert "age" in detector.numeric_features
-        assert "income" in detector.numeric_features
-        assert len(detector.bins) == 2
+        feature_names = [f.name for f in detector.features]
+        assert "age" in feature_names
+        assert "income" in feature_names
 
     def test_fit_categorical_features(self, categorical_features, reference_df):
         detector = TabularDriftDetector()
         detector.fit(categorical_features, reference_df)
-        assert "category" in detector.categorical_features
+        feature_names = [f.name for f in detector.features]
+        assert "category" in feature_names
 
     def test_call_returns_metrics(self, numeric_features, reference_df, similar_df):
         detector = TabularDriftDetector()
@@ -90,8 +91,8 @@ class TestTabularDriftDetector:
 
         metric_names = [list(m.keys())[0] for m in metrics]
         assert "psi" in metric_names
-        assert "ks_statistic" in metric_names
-        assert "wasserstein_distance" in metric_names
+        assert "ks" in metric_names
+        assert "wasserstein" in metric_names
 
     def test_categorical_drift_metrics(
         self, categorical_features, reference_df, similar_df
@@ -101,20 +102,18 @@ class TestTabularDriftDetector:
         metrics = detector(similar_df)
 
         metric_names = [list(m.keys())[0] for m in metrics]
-        assert "chi2_statistic" in metric_names
-        assert "jensenshannon_distance" in metric_names
+        assert "chi2" in metric_names
+        assert "jsd_cat" in metric_names
 
     def test_drift_detected_high_drift(
         self, numeric_features, reference_df, drifted_df
     ):
-        detector = TabularDriftDetector(numeric_threshold=0.1)
+        detector = TabularDriftDetector()
         detector.fit(numeric_features, reference_df)
         metrics = detector(drifted_df)
 
         drift_detected = [
-            m
-            for m in metrics
-            if "drift_detected" in m and m["drift_detected"]["score"] is True
+            m for m in metrics if "drift_flag" in m and m["drift_flag"]["score"] > 0
         ]
         assert len(drift_detected) > 0
 
@@ -126,5 +125,5 @@ class TestTabularDriftDetector:
         metrics = detector(similar_df)
 
         metric_names = [list(m.keys())[0] for m in metrics]
-        assert "ratio_features_with_drift" in metric_names
-        assert "avg_data_drift" in metric_names
+        assert "drift_flag" in metric_names
+        assert "drift_score" in metric_names
