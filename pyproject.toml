@@ -1,10 +1,12 @@
 [project]
 name = "data-monitor"
-version = "0.2.0"
-description = "VERA Dashboard plugin for data evaluation implementing data drift and anomaly detection"
+version = "0.3.0"
+description = "Dashboard plugin for data evaluation implementing data drift and anomaly detection"
 readme = "README.md"
 authors = [
-    { name = "Mohammed Fellaji", email = "fellajimohammed@gmail.com" }
+    { name = "Mohammed Fellaji", email = "fellajimohammed@gmail.com" },
+    { name = "Yu-Lin Huang", email = "yu-lin.huang@uni.lu" },
+    { name = "Firas Bayram", email = "firas.bayram@uni.lu" },
 ]
 requires-python = ">=3.12"
 dependencies = [
