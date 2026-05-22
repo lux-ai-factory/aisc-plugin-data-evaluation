@@ -6,8 +6,8 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from vera_plugin_data_evaluation import DataDriftPlugin
-from vera_plugin_data_evaluation.utils import Feature, FeatureType
+from data_monitor import DataDriftPlugin
+from data_monitor.utils import Feature, FeatureType
 
 
 DATASETS_DIR = Path(__file__).parent.parent / "datasets" / "classification"
@@ -32,18 +32,24 @@ class TestDataDriftPlugin:
     def test_metric_names(self, data_drift_plugin):
         metric_names = data_drift_plugin.metric_names()
         expected = [
-            "avg_data_drift",
+            "drift_flag",
+            "drift_score",
+            "Drift Score",
             "Number of Drifted Features",
-            "data_drift",
-            "wasserstein_distance",
+            "c2st",
+            "mmd",
+            "ensemble_fraction",
             "psi",
-            "ks_statistic",
-            "ks_pvalue",
-            "jensenshannon_distance",
-            "chi2_statistic",
-            "chi2_pvalue",
-            "drift_detected",
-            "ratio_features_with_drift",
+            "ks",
+            "wasserstein",
+            "jsd_num",
+            "smd",
+            "anderson_darling",
+            "levene",
+            "chi2",
+            "jsd_cat",
+            "tvd",
+            "psi_cat",
         ]
         assert metric_names == expected
 

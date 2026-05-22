@@ -15,18 +15,29 @@ class DataDriftPlugin(BaseDataPlugin):
     ui_icon = "alt_route"
 
     drift_metric_names = [
-        "avg_data_drift",
+        # Top-line decision
+        "drift_flag",
+        "drift_score",
+        "Drift Score",
         "Number of Drifted Features",
-        "data_drift",
-        "wasserstein_distance",
+        # Multivariate channel
+        "c2st",
+        "mmd",
+        # Per-feature ensemble
+        "ensemble_fraction",
+        # Per-feature univariate diagnostics (numeric)
         "psi",
-        "ks_statistic",
-        "ks_pvalue",
-        "jensenshannon_distance",
-        "chi2_statistic",
-        "chi2_pvalue",
-        "drift_detected",
-        "ratio_features_with_drift",
+        "ks",
+        "wasserstein",
+        "jsd_num",
+        "smd",
+        "anderson_darling",
+        "levene",
+        # Per-feature univariate diagnostics (categorical)
+        "chi2",
+        "jsd_cat",
+        "tvd",
+        "psi_cat",
     ]
 
     @classmethod
@@ -76,8 +87,9 @@ class DataDriftPlugin(BaseDataPlugin):
             "Reference shape: %s, Evaluated shape: %s", reference.shape, evaluated.shape
         )
 
+        # TODO: include alpha
         detector = TabularDriftDetector()
-        detector.fit(features, reference)
+        detector.fit(features, reference, date_feature=date_feature)
 
         dates_masks = list(
             dataframe_iter(evaluated, date_feature, frequency, window_size)
@@ -140,11 +152,11 @@ class DataDriftPlugin(BaseDataPlugin):
     def get_metric_visualizations(self, config_data: dict) -> list[MetricVisualization]:
         config = self.validate_config_form_data(config_data)
 
-        table = MetricVisualization(
-            chart_type=ChartType.TABLE, metrics=self.get_metrics()
-        )
+        # table = MetricVisualization(
+        #     chart_type=ChartType.TABLE, metrics=self.get_metrics()
+        # )
 
-        metrics = self.metric_names()
+        # metrics = self.metric_names()
         is_multivalued = (
             config.date_feature
             and config.frequency.strip()
@@ -152,9 +164,9 @@ class DataDriftPlugin(BaseDataPlugin):
         )
         chart_type = ChartType.LINE if is_multivalued else ChartType.BARS
 
-        charts = [
-            MetricVisualization(chart_type=chart_type, metrics=[metric])
-            for metric in metrics
+        return [
+            MetricVisualization(chart_type=chart_type, metrics=["Drift Score"]),
+            MetricVisualization(
+                chart_type=ChartType.BARS, metrics=["Number of Drifted Features"]
+            ),
         ]
-
-        return [table, *charts]

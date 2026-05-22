@@ -1,6 +1,6 @@
 """Tests for utility functions."""
 
-from vera_plugin_data_evaluation.utils import (
+from data_monitor.utils import (
     Feature,
     FeatureType,
     group_metrics,

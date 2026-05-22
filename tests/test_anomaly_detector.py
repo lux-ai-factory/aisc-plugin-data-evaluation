@@ -4,8 +4,8 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from vera_plugin_data_evaluation.utils import Feature, FeatureType
-from vera_plugin_data_evaluation.data_anomaly.anomaly_detector import (
+from data_monitor.utils import Feature, FeatureType
+from data_monitor.data_anomaly.anomaly_detector import (
     TabularAnomalyDetector,
 )
 

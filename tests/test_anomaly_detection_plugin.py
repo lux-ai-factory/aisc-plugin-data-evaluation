@@ -6,8 +6,8 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from vera_plugin_data_evaluation import DataAnomalyPlugin
-from vera_plugin_data_evaluation.utils import Feature, FeatureType
+from data_monitor import DataAnomalyPlugin
+from data_monitor.utils import Feature, FeatureType
 
 
 DATASETS_DIR = Path(__file__).parent.parent / "datasets" / "classification"

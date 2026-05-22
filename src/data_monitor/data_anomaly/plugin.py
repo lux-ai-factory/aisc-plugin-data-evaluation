@@ -136,9 +136,9 @@ class DataAnomalyPlugin(BaseDataPlugin):
     def get_metric_visualizations(self, config_data: dict) -> list[MetricVisualization]:
         # config = self.validate_config_form_data(config_data)
 
-        table = MetricVisualization(
-            chart_type=ChartType.TABLE, metrics=self.get_metrics()
-        )
+        # table = MetricVisualization(
+        #     chart_type=ChartType.TABLE, metrics=self.get_metrics()
+        # )
 
         pie_metrics = [
             metric_name
@@ -151,10 +151,10 @@ class DataAnomalyPlugin(BaseDataPlugin):
             metrics=pie_metrics,
         )
 
-        # NOTE: add this only if time series ...
-        bars = MetricVisualization(
-            chart_type=ChartType.BARS,
-            metrics=pie_metrics,
-        )
+        # # NOTE: add this only if time series ...
+        # bars = MetricVisualization(
+        #     chart_type=ChartType.BARS,
+        #     metrics=pie_metrics,
+        # )
 
-        return [table, piechart, bars]
+        return [piechart]
