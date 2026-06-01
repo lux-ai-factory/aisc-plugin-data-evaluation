@@ -10,12 +10,12 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "vera-plugin-interface",
     "numpy>=2.0.0",
     "pandas>=2.2.0",
     "scipy>=1.13.0",
     "joblib>=1.5.3",
     "scikit-learn>=1.8.0",
+    "aisc-plugin-interface>=0.2.5",
 ]
 
 [dependency-groups]
@@ -29,9 +29,6 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.uv.sources]
-vera-plugin-interface = { git = "https://github.com/lux-ai-factory/vera-plugin-interface" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
