@@ -4,7 +4,7 @@ from pathlib import Path
 from abc import abstractmethod
 from typing import Any, TypeVar
 
-from vera_plugin_interface import (
+from aisc_plugin_interface import (
     BaseEvaluationPlugin,
     PluginFeatureFlags,
     InputType,

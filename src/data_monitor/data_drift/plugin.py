@@ -1,6 +1,6 @@
 from typing import Any
 
-from vera_plugin_interface import MetricVisualization, ChartType
+from aisc_plugin_interface import MetricVisualization, ChartType
 
 from ..base_data_plugin import BaseDataPlugin
 from ..data_input_provider import dataframe_iter
