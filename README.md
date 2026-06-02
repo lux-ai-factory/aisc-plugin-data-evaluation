@@ -240,7 +240,7 @@ PIPELINE.md                  # Pipeline diagram with explanatory text
 | Verification type | Technical test |
 | Project | [aisc-plugin-data-evaluation](https://github.com/lux-ai-factory/aisc-plugin-data-evaluation) |
 | Branch | main |
-| Version | 0.3.0 |
+| Version | 0.3.1 |
 | Project maturity | Deployed |
 | Scientific reference | - |
 | Verification targets | [Data Drift Detection] [Distribution Analysis] |
@@ -256,7 +256,7 @@ PIPELINE.md                  # Pipeline diagram with explanatory text
 | Verification type | Technical test |
 | Project | [aisc-plugin-data-evaluation](https://github.com/lux-ai-factory/aisc-plugin-data-evaluation) |
 | Branch | main |
-| Version | 0.3.0 |
+| Version | 0.3.1 |
 | Project maturity | Deployed |
 | Scientific reference | - |
 | Verification targets | [Anomaly Detection] [Data Quality] |
