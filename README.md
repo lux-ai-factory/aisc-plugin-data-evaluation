@@ -1,8 +1,8 @@
-# vera-plugin-data-evaluation
+# aisc-plugin-data-evaluation
 
-[![CI](https://github.com/lux-ai-factory/vera-plugin-data-evaluation/actions/workflows/ci.yml/badge.svg)](https://github.com/lux-ai-factory/vera-plugin-data-evaluation/actions/workflows/ci.yml)
+[![CI](https://github.com/lux-ai-factory/aisc-plugin-data-evaluation/actions/workflows/ci.yml/badge.svg)](https://github.com/lux-ai-factory/aisc-plugin-data-evaluation/actions/workflows/ci.yml)
 
-A Python plugin for data evaluation, implementing data drift detection and anomaly detection using statistical methods. Built on the [vera-plugin-interface](https://github.com/lux-ai-factory/vera-plugin-interface) framework.
+A Python plugin for data evaluation, implementing data drift detection and anomaly detection using statistical methods. Built on the [aisc-plugin-interface](https://github.com/lux-ai-factory/aisc-plugin-interface) framework.
 
 ## Features
 
@@ -27,7 +27,7 @@ uv sync
 Both plugins take a reference dataset (training data) and an evaluated dataset (test data) as `*.csv` or `*.parquet` files.
 
 ```python
-from vera_plugin_data_evaluation import DataDriftPlugin
+from aisc_plugin_data_evaluation import DataDriftPlugin
 
 plugin = DataDriftPlugin()
 plugin.set_input_content("reference-dataset", train_data_bytes)
@@ -193,7 +193,7 @@ git commit --no-verify -m "message"
 ### Project Structure
 
 ```
-src/vera_plugin_data_evaluation/
+src/aisc_plugin_data_evaluation/
 ├── __init__.py              # Public exports
 ├── base_data_plugin.py      # Abstract base class for plugins
 ├── config_form.py           # Pydantic config + UI schema
@@ -238,7 +238,7 @@ PIPELINE.md                  # Pipeline diagram with explanatory text
 | Description | Detects distribution drift between datasets via a multivariate decision layer (C2ST + MMD with auto RFF for big data) and a univariate diagnostic layer (PSI, KS, Wasserstein, JSD, SMD, Anderson-Darling, Levene, Chi², TVD, PSI-categorical) with data-driven calibration in both tabular and time-series modes. |
 | License | - |
 | Verification type | Technical test |
-| Project | [vera-plugin-data-evaluation](https://github.com/lux-ai-factory/vera-plugin-data-evaluation) |
+| Project | [aisc-plugin-data-evaluation](https://github.com/lux-ai-factory/aisc-plugin-data-evaluation) |
 | Branch | main |
 | Version | 0.3.0 |
 | Project maturity | Deployed |
@@ -254,7 +254,7 @@ PIPELINE.md                  # Pipeline diagram with explanatory text
 | Description | Detects anomalies including constraint violations, new/missing categories, and distribution outliers. |
 | License | - |
 | Verification type | Technical test |
-| Project | [vera-plugin-data-evaluation](https://github.com/lux-ai-factory/vera-plugin-data-evaluation) |
+| Project | [aisc-plugin-data-evaluation](https://github.com/lux-ai-factory/aisc-plugin-data-evaluation) |
 | Branch | main |
 | Version | 0.3.0 |
 | Project maturity | Deployed |
