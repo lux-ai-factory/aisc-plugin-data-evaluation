@@ -16,6 +16,20 @@ A Python plugin for data evaluation, implementing data drift detection and anoma
 - **Time-windowed evaluation**: Compute metrics over sliding windows with configurable frequency
 - **Multiple input formats**: CSV and Parquet datasets
 
+## In the AISC stack: drift of what the target answers
+
+Data Drift follows AISC's plugin standard (aisc-plugin-interface, PLUGIN_DEVELOPER_GUIDE.md section 13):
+
+- **With a target that has an endpoint** (a scorer, set under Manage, Targets and endpoints), every row of
+  both datasets is first sent through it (`@dataset_through_target`), and the answer's columns drift like
+  the uploaded features: numbers (`target.score`) and short values with few levels (`target.recommendation`);
+  free text and ids are left out. The answers are saved with the run (`target-answers-<dataset>.csv`).
+  Settings: **Calls to the target at once** (default 1) and **Rows sent to the target** (0: all).
+- **With a target that has no endpoint** (a dataset component), drift of the uploads, as before.
+- Data Anomaly only reads its inputs (`@assesses_inputs`).
+- Tests: `uv run --with pytest --with-editable <aisc>/shared/plugin-interface python -m pytest -q tests`
+  (the stack's plugin interface; PyPI's `aisc-plugin-interface` has no connector).
+
 ## Installation
 
 ```bash

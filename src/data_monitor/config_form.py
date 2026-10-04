@@ -56,6 +56,17 @@ class ConfigForm(BaseModel):
         default_factory=list, description="List of features to use for prediction"
     )
 
+    # When the evaluation's target has an endpoint (a scorer), both datasets are first sent through it
+    # (AISC's @dataset_through_target), and its answers drift like the other features.
+    target_calls_at_once: int = Field(
+        default=1, ge=1, le=8, title="Calls to the target at once",
+        description="When the target has an endpoint: how many rows are sent to it at the same time.",
+    )
+    target_row_limit: int = Field(
+        default=0, ge=0, title="Rows sent to the target",
+        description="When the target has an endpoint: send at most this many rows of each dataset (0: all).",
+    )
+
     @model_validator(mode="after")
     def validate_special_features(self) -> "ConfigForm":
         self.target_feature = self.target_feature or None

@@ -1,6 +1,6 @@
 [project]
 name = "data-monitor"
-version = "0.3.1"
+version = "0.4.0"
 description = "Dashboard plugin for data evaluation implementing data drift and anomaly detection"
 readme = "README.md"
 authors = [
@@ -15,7 +15,7 @@ dependencies = [
     "scipy>=1.13.0",
     "joblib>=1.5.3",
     "scikit-learn>=1.8.0",
-    "aisc-plugin-interface>=0.2.5",
+    "aisc-plugin-interface>=0.2.7",
 ]
 
 [dependency-groups]

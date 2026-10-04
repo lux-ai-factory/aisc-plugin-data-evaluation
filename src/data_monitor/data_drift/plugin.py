@@ -1,13 +1,45 @@
 from typing import Any
 
 from aisc_plugin_interface import MetricVisualization, ChartType
+from aisc_plugin_interface.system_under_test import PREFIX, dataset_through_target
 
 from ..base_data_plugin import BaseDataPlugin
 from ..data_input_provider import dataframe_iter
-from ..utils import add_metrics, group_metrics
+from ..utils import Feature, FeatureType, add_metrics, group_metrics
 from .drift_detector import TabularDriftDetector
 
 
+#: a text column of the target's answers with more distinct values than this is free text or an id, not
+#: a category whose drift means something
+MAX_CATEGORIES = 20
+#: ... and a category is short: longer values on average are sentences (an explanation), not a category
+MAX_CATEGORY_CHARS = 40
+
+
+def target_features(reference, evaluated, already: set[str]) -> list[Feature]:
+    """The columns the target's answers added (target.<field>) worth drifting: numbers, and text with few
+    distinct values (a recommendation, a band). Free text and ids are left out."""
+    import pandas as pd
+
+    found = []
+    for name in reference.columns:
+        if not str(name).startswith(PREFIX) or name in already or name not in evaluated.columns:
+            continue
+        both = pd.concat([reference[name], evaluated[name]], ignore_index=True).dropna()
+        if both.empty:
+            continue
+        if pd.api.types.is_bool_dtype(both) or both.isin([True, False, "True", "False"]).all():
+            found.append(Feature(name=name, min=0.0, max=0.0, type=FeatureType.CATEGORICAL))
+        elif pd.api.types.is_numeric_dtype(both):
+            found.append(Feature(name=name, min=float(both.min()), max=float(both.max()), type=FeatureType.FLOAT))
+        elif both.astype(str).nunique() <= MAX_CATEGORIES and both.astype(str).str.len().mean() <= MAX_CATEGORY_CHARS:
+            found.append(Feature(name=name, min=0.0, max=0.0, type=FeatureType.CATEGORICAL))
+    return found
+
+
+# A scorer's answers drift too: with a target that has an endpoint, both datasets go through it first;
+# without one (a dataset component), drift of the uploads as before.
+@dataset_through_target(datasets=("reference-dataset", "evaluated-dataset"), required=False)
 @add_metrics
 class DataDriftPlugin(BaseDataPlugin):
     plugin_name = "Data Drift"
@@ -86,6 +118,10 @@ class DataDriftPlugin(BaseDataPlugin):
         self.logger.debug(
             "Reference shape: %s, Evaluated shape: %s", reference.shape, evaluated.shape
         )
+        added = target_features(reference, evaluated, {f.name for f in config.features})
+        if added:
+            self.logger.info("Drifting the target's answers too: %s", ", ".join(f.name for f in added))
+            features = features + added
 
         # TODO: include alpha
         detector = TabularDriftDetector()
