@@ -27,6 +27,12 @@ Data Drift follows AISC's plugin standard (aisc-plugin-interface, PLUGIN_DEVELOP
   Settings: **Calls to the target at once** (default 1) and **Rows sent to the target** (0: all).
 - **With a target that has no endpoint** (a dataset component), drift of the uploads, as before.
 - Data Anomaly only reads its inputs (`@assesses_inputs`).
+- **Results as data (0.4.1):** each per-feature measure also carries `dimensions`: `feature`, plus for Data Drift
+  the raw `statistic`, the `p_value` (hypothesis tests only) and the `flag` (`yes`/`no`). These are strings,
+  since the engine accepts no floats there. The text `description` is unchanged.
+- **Default charts (0.4.1):** both plugins' `get_metric_visualizations` add charts per feature after their own:
+  Data Drift adds *PSI per feature* and *Drift tests per feature*, and Data Anomaly adds *Checks per feature*. The
+  AISC results dashboard shows them as each plugin's default charts.
 - Tests: `uv run --with pytest --with-editable <aisc>/shared/plugin-interface python -m pytest -q tests`
   (the stack's plugin interface; PyPI's `aisc-plugin-interface` has no connector).
 

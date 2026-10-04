@@ -201,8 +201,25 @@ class DataDriftPlugin(BaseDataPlugin):
         chart_type = ChartType.LINE if is_multivalued else ChartType.BARS
 
         return [
-            MetricVisualization(chart_type=chart_type, metrics=["Drift Score"]),
+            MetricVisualization(chart_type=chart_type, metrics=["Drift Score"], title="Drift Score"),
             MetricVisualization(
-                chart_type=ChartType.BARS, metrics=["Number of Drifted Features"]
+                chart_type=ChartType.BARS,
+                metrics=["Number of Drifted Features"],
+                title="Number of Drifted Features",
+            ),
+            # per feature: the dimensions every per-feature measure carries (drift_detector.py)
+            MetricVisualization(
+                chart_type=ChartType.BARS,
+                metrics=["psi"],
+                title="PSI per feature",
+                description="Population stability index of each numeric feature (score: PSI / 0.25, capped at 1).",
+                group_by_dimensions=["feature"],
+            ),
+            MetricVisualization(
+                chart_type=ChartType.TABLE,
+                metrics=["psi", "smd", "ks", "wasserstein", "levene", "chi2", "psi_cat"],
+                title="Drift tests per feature",
+                description="Each test's score per feature; the raw statistic, p-value and flag are in the measures' dimensions.",
+                group_by_dimensions=["feature"],
             ),
         ]

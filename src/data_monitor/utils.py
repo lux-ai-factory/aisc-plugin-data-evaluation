@@ -76,6 +76,8 @@ def add_metrics(cls: type[T]) -> type[T]:
                     score=float(score),
                     time=measure.get("time", datetime.now()),
                     description=measure.get("description"),
+                    # what the results dashboard groups by: the feature, the raw statistic, the flag
+                    dimensions=measure.get("dimensions") or None,
                 )
                 for measure in measures
                 if (score := measure["score"]) is not None

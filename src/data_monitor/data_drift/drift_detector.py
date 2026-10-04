@@ -423,6 +423,10 @@ class TabularDriftDetector:
                     parts.append("score_thr=default")
                 parts.append(f"flag={'YES' if r.flag else 'no'}")
                 desc = f"{feat} | " + " | ".join(parts)
+                # the same facts as data, for the results dashboard (strings: the engine takes no floats)
+                dims = {"feature": str(feat), "statistic": f"{r.raw:.6g}", "flag": "yes" if r.flag else "no"}
+                if r.p_value is not None and pd.notna(r.p_value):
+                    dims["p_value"] = f"{r.p_value:.6g}"
                 out.append(
                     {
                         metric_name: dict(
@@ -430,6 +434,7 @@ class TabularDriftDetector:
                             time=date,
                             description=desc,
                             feature_pid=str(pid) if pid is not None else None,
+                            dimensions=dims,
                         )
                     }
                 )
@@ -449,6 +454,7 @@ class TabularDriftDetector:
                         time=date,
                         description=feat,
                         feature_pid=str(pid) if pid is not None else None,
+                        dimensions={"feature": str(feat)},
                     )
                 }
             )

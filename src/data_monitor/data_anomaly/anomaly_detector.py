@@ -117,6 +117,7 @@ class TabularAnomalyDetector:
                         "New Categories": dict(
                             score=len(new_categories),
                             description=feat_name,
+                            dimensions={"feature": str(feat_name)},
                             time=date,
                         )
                     },
@@ -124,6 +125,7 @@ class TabularAnomalyDetector:
                         "Missing Categories": dict(
                             score=len(missing_categories),
                             description=feat_name,
+                            dimensions={"feature": str(feat_name)},
                             time=date,
                         )
                     },
@@ -169,6 +171,7 @@ class TabularAnomalyDetector:
                         "Lower Constraint Violations": dict(
                             score=min_violations,
                             description=feature.name,
+                            dimensions={"feature": str(feature.name)},
                             time=date,
                         )
                     },
@@ -176,6 +179,7 @@ class TabularAnomalyDetector:
                         "Upper Constraint Violations": dict(
                             score=max_violations,
                             description=feature.name,
+                            dimensions={"feature": str(feature.name)},
                             time=date,
                         )
                     },
@@ -183,6 +187,7 @@ class TabularAnomalyDetector:
                         "Distribution Outlier": dict(
                             score=dist_violations,
                             description=feature.name,
+                            dimensions={"feature": str(feature.name)},
                             time=date,
                         )
                     },

@@ -151,6 +151,15 @@ class DataAnomalyPlugin(BaseDataPlugin):
         piechart = MetricVisualization(
             chart_type=ChartType.PIE,
             metrics=pie_metrics,
+            title="Outcome",
+        )
+        # per feature: the dimensions every per-feature check carries (anomaly_detector.py)
+        per_feature = MetricVisualization(
+            chart_type=ChartType.TABLE,
+            metrics=[m for m in self.metric_names() if m not in pie_metrics],
+            title="Checks per feature",
+            description="How many values of each feature break each check.",
+            group_by_dimensions=["feature"],
         )
 
         # # NOTE: add this only if time series ...
@@ -159,4 +168,4 @@ class DataAnomalyPlugin(BaseDataPlugin):
         #     metrics=pie_metrics,
         # )
 
-        return [piechart]
+        return [piechart, per_feature]
