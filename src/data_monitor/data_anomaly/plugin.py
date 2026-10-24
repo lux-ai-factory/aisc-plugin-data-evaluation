@@ -1,7 +1,7 @@
 from typing import Any
 
 from aisc_plugin_interface import MetricVisualization, ChartType
-from aisc_plugin_interface.system_under_test import assesses_inputs
+from aisc_plugin_interface.assesses import assesses, inputs_access
 
 from ..base_data_plugin import BaseDataPlugin
 from ..data_input_provider import dataframe_iter
@@ -9,7 +9,7 @@ from ..utils import add_metrics, group_metrics
 from .anomaly_detector import TabularAnomalyDetector
 
 
-@assesses_inputs()
+@assesses(card=inputs_access())
 @add_metrics
 class DataAnomalyPlugin(BaseDataPlugin):
     plugin_name = "Data Anomaly"

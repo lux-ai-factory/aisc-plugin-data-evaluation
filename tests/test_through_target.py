@@ -79,3 +79,16 @@ def test_a_run_through_the_scorer_reports_drift_of_its_answers(scorer):
     assert {"age", "income", "target.score", "target.recommendation"} <= measured, measured
     assert "target.explanation" not in measured
     assert len([r for r in scorer.seen if r["path"] == "/score"]) == 80
+
+
+def test_both_plugins_read_as_assessing_a_card_target():
+    from aisc_plugin_interface.assesses import card_needs_connection, target_kinds_of
+    assert target_kinds_of(DataDriftPlugin) == ("card",)
+    assert target_kinds_of(DataAnomalyPlugin) == ("card",)
+    assert not card_needs_connection(DataDriftPlugin)
+    assert not card_needs_connection(DataAnomalyPlugin)
+
+
+def test_anomaly_declares_its_card_access_with_assesses():
+    assert DataAnomalyPlugin.card_access == "inputs"
+    assert DataAnomalyPlugin.local_model_input is None
