@@ -15,7 +15,7 @@ dependencies = [
     "scipy>=1.13.0",
     "joblib>=1.5.3",
     "scikit-learn>=1.8.0",
-    "aisc-plugin-interface>=0.2.7",
+    "aisc-plugin-interface>=0.2.9",
 ]
 
 [dependency-groups]
