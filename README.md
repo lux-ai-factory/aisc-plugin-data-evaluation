@@ -33,8 +33,9 @@ Data Drift follows AISC's plugin standard (aisc-plugin-interface, PLUGIN_DEVELOP
 - **Default charts (0.4.1):** both plugins' `get_metric_visualizations` add charts per feature after their own:
   Data Drift adds *PSI per feature* and *Drift tests per feature*, and Data Anomaly adds *Checks per feature*. The
   AISC results dashboard shows them as each plugin's default charts.
-- Tests: `uv run --with pytest --with-editable <aisc>/shared/plugin-interface python -m pytest -q tests`
-  (the stack's plugin interface; PyPI's `aisc-plugin-interface` has no connector).
+- Tests: `uv run --with pytest python -m pytest -q tests` (the lock takes interface 0.4.0 from `vendor/`;
+  PyPI's `aisc-plugin-interface` 0.3.0 lacks it). Add `--with-editable <aisc>/shared/plugin-interface` only to
+  test against an unreleased interface.
 
 ## Installation
 
