@@ -1,28 +1,91 @@
-name: CI
+# The plugin's tests, on the interface wheel under vendor/ (never PyPI's), with its Git LFS files fetched as real
+# files; and a separate check that the vendored wheel is the one AISC's engine vendors. The same file serves every
+# AISC plugin repository: a repository without LFS files passes the LFS step with nothing to fetch.
+name: ci
 
 on:
   push:
-    branches: [main, master]
+    branches: [feat/unified-modules, main, master]
   pull_request:
-    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UV_PYTHON: "3.12"
+  # the AISC branch the wheel is compared with; a repository variable can move it
+  AISC_REF: ${{ vars.AISC_REF || 'feat/unified-modules' }}
 
 jobs:
   test:
-    name: Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
           lfs: true
+      - name: Git LFS files are real files
+        run: |
+          set -x
+          git lfs version || { sudo apt-get update -q && sudo apt-get install -y -q git-lfs; }
+          git lfs install --local
+          git lfs pull || echo "git lfs pull could not fetch every object"
+          git lfs ls-files
+          # an object not downloaded is listed with " - ", a downloaded one with " * "
+          missing=$(git lfs ls-files | grep ' - ' || true)
+          if [ -n "$missing" ]; then
+            echo "$missing"
+            echo "LFS objects missing: $(printf '%s\n' "$missing" | grep -c .)"
+            exit 1
+          fi
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked
+      - name: the interface is the vendored wheel
+        run: |
+          uv run --locked python -c '
+          import importlib.metadata, json, sys
+          dist = importlib.metadata.distribution("aisc-plugin-interface")
+          problems = []
+          if dist.version != "0.4.0":
+              problems.append(f"version {dist.version}, not 0.4.0")
+          url = json.loads(dist.read_text("direct_url.json") or "{}").get("url") or "an index"
+          if not url.endswith("/vendor/aisc_plugin_interface-0.4.0-py3-none-any.whl"):
+              problems.append(f"installed from {url}, not the wheel under vendor/")
+          try:
+              import aisc_plugin_interface.assesses
+          except ImportError as error:
+              problems.append(f"aisc_plugin_interface.assesses does not import: {error}")
+          if problems:
+              sys.exit("the interface is not the vendored wheel: " + "; ".join(problems))
+          print("interface 0.4.0 from vendor/")
+          '
+      - run: uv run --locked --with pytest python -m pytest -q -p no:cacheprovider -rs tests
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-
-      - name: Set up Python
-        run: uv python install 3.12
-
-      - name: Install dependencies
-        run: uv sync --dev
-
-      - name: Run tests
-        run: uv run pytest tests/ -v
+  # A red job here means AISC moved its interface wheel and this plugin must be revendored, not that a test failed.
+  same-wheel-as-aisc:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GIT_LFS_SKIP_SMUDGE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: AISC's engine, whose vendor/ holds the wheel
+        run: git clone --depth 1 --branch "$AISC_REF" https://github.com/lux-ai-factory/aisc-backend.git "$RUNNER_TEMP/aisc/apps/backend"
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked
+      - name: the vendored wheel is AISC's
+        run: |
+          out="$RUNNER_TEMP/same-wheel.txt"
+          status=0
+          AISC_DIR="$RUNNER_TEMP/aisc" uv run --locked --with pytest python -m pytest -q -p no:cacheprovider -rs \
+            tests/test_interface_pin.py -k vendored_wheel_is_the_aisc_one > "$out" 2>&1 || status=$?
+          cat "$out"
+          if grep -q "AISC_DIR not set" "$out"; then
+            echo "the comparison skipped: AISC's wheel was not found"
+            exit 1
+          fi
+          if [ "$status" -ne 0 ] || ! tail -n 1 "$out" | grep -qE '^1 passed(,| in )'; then
+            echo "the comparison did not end with 1 passed"
+            exit 1
+          fi
