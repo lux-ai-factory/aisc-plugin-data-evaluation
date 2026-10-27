@@ -81,9 +81,7 @@ class TestTabularAnomalyDetector:
         assert isinstance(metrics, list)
         assert len(metrics) > 0
 
-    def test_constraint_violations_detected(
-        self, numeric_features, reference_df, anomalous_df
-    ):
+    def test_constraint_violations_detected(self, numeric_features, reference_df, anomalous_df):
         detector = TabularAnomalyDetector()
         detector.fit(numeric_features, reference_df)
         metrics = detector(anomalous_df)
@@ -94,17 +92,13 @@ class TestTabularAnomalyDetector:
         assert len(upper_violations) > 0
         assert len(lower_violations) > 0
 
-    def test_new_categories_detected(
-        self, categorical_features, reference_df, anomalous_df
-    ):
+    def test_new_categories_detected(self, categorical_features, reference_df, anomalous_df):
         detector = TabularAnomalyDetector()
         detector.fit(categorical_features, reference_df)
         metrics = detector(anomalous_df)
 
         new_categories = [
-            m
-            for m in metrics
-            if "New Categories" in m and m["New Categories"]["score"] > 0
+            m for m in metrics if "New Categories" in m and m["New Categories"]["score"] > 0
         ]
         assert len(new_categories) > 0
 
@@ -117,9 +111,7 @@ class TestTabularAnomalyDetector:
         metrics = detector(eval_df)
 
         missing_categories = [
-            m
-            for m in metrics
-            if "Missing Categories" in m and m["Missing Categories"]["score"] > 0
+            m for m in metrics if "Missing Categories" in m and m["Missing Categories"]["score"] > 0
         ]
         assert len(missing_categories) > 0
 

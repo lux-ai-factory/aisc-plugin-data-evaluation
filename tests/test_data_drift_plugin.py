@@ -1,27 +1,48 @@
-"""Integration tests for data drift plugin using real datasets."""
+"""Integration tests for DataDriftPlugin, driven by generated case fixtures.
 
-from pathlib import Path
+Each case folder under ``tests/files/`` (from ``tests/generate_files.py``) has a
+reference CSV, an evaluated CSV, a features-only datashape payload and a
+webapp-importable ``config.json``.
+"""
+
+import json
 
 import pytest
-import numpy as np
-import pandas as pd
 
 from data_monitor import DataDriftPlugin
-from data_monitor.utils import Feature, FeatureType
-
-
-DATASETS_DIR = Path(__file__).parent.parent / "datasets" / "classification"
+from tests.conftest import CASES, load_case
 
 
 @pytest.fixture
 def data_drift_plugin():
     """Create a data drift plugin instance."""
-    plugin = DataDriftPlugin()
-    return plugin
+    return DataDriftPlugin()
 
 
-class TestDataDriftPlugin:
-    """Tests for DataDriftPlugin class."""
+EXPECTED_METRICS = [
+    "drift_flag",
+    "drift_score",
+    "Drift Score",
+    "Number of Drifted Features",
+    "c2st",
+    "mmd",
+    "ensemble_fraction",
+    "psi",
+    "ks",
+    "wasserstein",
+    "jsd_num",
+    "smd",
+    "anderson_darling",
+    "levene",
+    "chi2",
+    "jsd_cat",
+    "tvd",
+    "psi_cat",
+]
+
+
+class TestDataDriftPluginMetadata:
+    """Metadata and config contract (no data needed)."""
 
     def test_plugin_name(self, data_drift_plugin):
         assert data_drift_plugin.plugin_name == "Data Drift"
@@ -30,134 +51,73 @@ class TestDataDriftPlugin:
         assert data_drift_plugin.display_icon == "alt_route"
 
     def test_metric_names(self, data_drift_plugin):
-        metric_names = data_drift_plugin.metric_names()
-        expected = [
-            "drift_flag",
-            "drift_score",
-            "Drift Score",
-            "Number of Drifted Features",
-            "c2st",
-            "mmd",
-            "ensemble_fraction",
-            "psi",
-            "ks",
-            "wasserstein",
-            "jsd_num",
-            "smd",
-            "anderson_darling",
-            "levene",
-            "chi2",
-            "jsd_cat",
-            "tvd",
-            "psi_cat",
-        ]
-        assert metric_names == expected
+        assert data_drift_plugin.metric_names() == EXPECTED_METRICS
 
-    @pytest.fixture
-    def numeric_features(self):
-        """Create numeric features."""
-        return [
-            Feature(name="age", min=0.0, max=100.0, type=FeatureType.INTEGER),
-            Feature(name="income", min=0.0, max=200000.0, type=FeatureType.FLOAT),
-        ]
+    def test_input_definitions(self, data_drift_plugin):
+        assert {input_def.name for input_def in data_drift_plugin.input_definitions} == {
+            "reference-dataset",
+            "evaluated-dataset",
+            "datashape",
+        }
 
-    @pytest.fixture
-    def categorical_features(self):
-        """Create categorical features."""
-        return [
-            Feature(name="category", min=0.0, max=0.0, type=FeatureType.CATEGORICAL),
-        ]
+    def test_config_defaults(self, data_drift_plugin):
+        config = data_drift_plugin.validate_config_form_data({})
+        assert config.frequency == ""
+        assert config.window_size == ""
 
-    @pytest.fixture
-    def reference_df(self):
-        """Create reference DataFrame."""
-        np.random.seed(42)
-        return pd.DataFrame(
-            {
-                "age": np.random.randint(18, 65, 100),
-                "income": np.random.uniform(30000, 150000, 100),
-                "category": np.random.choice(["A", "B", "C"], 100),
-            }
+    def test_metric_visualizations(self, data_drift_plugin):
+        charts = data_drift_plugin.get_metric_visualizations({"frequency": "", "window_size": ""})
+        assert isinstance(charts, list)
+        assert charts
+
+
+class TestDataDriftPluginEvaluate:
+    """Case-driven evaluate() runs."""
+
+    def test_missing_datashape_raises(self, data_drift_plugin):
+        case = load_case("no_drift")
+        data_drift_plugin.set_input_content("reference-dataset", case["reference"])
+        data_drift_plugin.set_input_content("evaluated-dataset", case["evaluated"])
+
+        with pytest.raises(ValueError, match="Data Shape input is required"):
+            data_drift_plugin.evaluate(case["config"])
+
+    @pytest.mark.parametrize("case", CASES)
+    def test_evaluate(self, data_drift_plugin, case):
+        case_data = load_case(case)
+        data_drift_plugin.set_input_content("reference-dataset", case_data["reference"])
+        data_drift_plugin.set_input_content("evaluated-dataset", case_data["evaluated"])
+        data_drift_plugin.set_input_content(
+            "datashape", json.dumps(case_data["datashape"]).encode("utf-8")
         )
 
-    @pytest.fixture
-    def similar_df(self, reference_df):
-        """Create DataFrame similar to reference (low drift)."""
-        np.random.seed(43)
-        return pd.DataFrame(
-            {
-                "age": np.random.randint(18, 65, 100),
-                "income": np.random.uniform(30000, 150000, 100),
-                "category": np.random.choice(["A", "B", "C"], 100),
-            }
-        )
-
-    @pytest.fixture
-    def drifted_df(self):
-        """Create DataFrame with significant drift."""
-        np.random.seed(44)
-        return pd.DataFrame(
-            {
-                "age": np.random.randint(50, 90, 100),  # Shifted age distribution
-                "income": np.random.uniform(100000, 300000, 100),  # Shifted income
-                "category": np.random.choice(
-                    ["C", "D", "E"], 100
-                ),  # Different categories
-            }
-        )
-
-    def test_set_input_providers(self, data_drift_plugin, reference_df, similar_df):
-        import pandas as pd
-
-        reference_df_bytes = reference_df.to_csv(index=False).encode("utf-8")
-        evaluated_df_bytes = similar_df.to_csv(index=False).encode("utf-8")
-
-        data_drift_plugin.set_input_content("reference-dataset", reference_df_bytes)
-        data_drift_plugin.set_input_content("evaluated-dataset", evaluated_df_bytes)
-
-        assert (
-            data_drift_plugin._input_provider_instances.get("reference-dataset")
-            is not None
-        )
-        assert (
-            data_drift_plugin._input_provider_instances.get("evaluated-dataset")
-            is not None
-        )
-        assert isinstance(
-            data_drift_plugin.get_input_data("reference-dataset"), pd.DataFrame
-        )
-        assert isinstance(
-            data_drift_plugin.get_input_data("evaluated-dataset"), pd.DataFrame
-        )
-
-    def test_parse_config_from_dataset(self, data_drift_plugin, reference_df):
-        reference_df_bytes = reference_df.to_csv(index=False).encode("utf-8")
-        config = data_drift_plugin.parse_config_from_dataset(reference_df_bytes)
-
-        assert config is not None
-        assert "features" in config
-        assert len(config["features"]) > 0
-        # Check that features have expected structure
-        for feature in config["features"]:
-            assert "name" in feature
-            assert "type" in feature
-            assert "min" in feature
-            assert "max" in feature
-
-    def test_evaluate(self, data_drift_plugin, reference_df, drifted_df):
-        reference_df_bytes = reference_df.to_csv(index=False).encode("utf-8")
-        evaluated_df_bytes = drifted_df.to_csv(index=False).encode("utf-8")
-
-        data_drift_plugin.set_input_content("reference-dataset", reference_df_bytes)
-        data_drift_plugin.set_input_content("evaluated-dataset", evaluated_df_bytes)
-
-        config_data = data_drift_plugin.parse_config_from_dataset(reference_df_bytes)
-
-        results = data_drift_plugin.evaluate(config_data)
+        results = data_drift_plugin.evaluate(case_data["config"])
 
         assert isinstance(results, dict)
-        # Check all expected metrics are present
-        for metric in data_drift_plugin.metric_names():
+        # evaluate() emits the registered metrics plus extra per-feature
+        # diagnostics; at minimum every registered metric must be present.
+        assert set(EXPECTED_METRICS) <= set(results)
+        for metric in EXPECTED_METRICS:
             assert metric in results
+            assert results[metric], f"Empty records for metric: {metric}"
             assert "score" in results[metric][0]
-            assert len(results[metric]) > 0
+
+        measures = data_drift_plugin.export_metrics(results)
+        assert len(measures) > 0
+        assert {measure.name for measure in measures} == set(EXPECTED_METRICS)
+
+    def test_no_drift_vs_drift_detected(self, data_drift_plugin):
+        """The generated no_drift case must not flag, the drift case should."""
+        for case in ["no_drift", "drift"]:
+            case_data = load_case(case)
+            data_drift_plugin.set_input_content("reference-dataset", case_data["reference"])
+            data_drift_plugin.set_input_content("evaluated-dataset", case_data["evaluated"])
+            data_drift_plugin.set_input_content(
+                "datashape", json.dumps(case_data["datashape"]).encode("utf-8")
+            )
+            results = data_drift_plugin.evaluate(case_data["config"])
+            flag = results["drift_flag"][0]["score"]
+            if case == "no_drift":
+                assert flag == 0
+            else:
+                assert flag == 1

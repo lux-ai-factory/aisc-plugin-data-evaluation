@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 import io
 from collections.abc import Iterator
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-import pandas as pd
 from aisc_plugin_interface import BaseInputProvider
 
 from .iterators import DateIterator
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 class DataFrameProvider(BaseInputProvider):
@@ -30,6 +35,8 @@ def dataframe_iter(
     window_size: str | None,
     date_round: str | None = "1 D",
 ) -> Iterator[tuple[datetime | None, pd.Series]]:
+    import pandas as pd
+
     if date_feature is not None:
         dataframe[date_feature] = pd.to_datetime(dataframe[date_feature])
 

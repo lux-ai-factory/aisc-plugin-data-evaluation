@@ -1,6 +1,10 @@
-from datetime import datetime
+from __future__ import annotations
 
-import pandas as pd
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 def get_date_batches(
@@ -22,6 +26,8 @@ def get_date_batches(
     Returns:
         list[tuple[pd.Timestamp, pd.Timestamp]]: List of (start, end) timestamp pairs
     """
+    import pandas as pd
+
     # Special case: if start_date equals end_date, create a single batch
     if start_date == end_date:
         # Create a batch that includes all data from that single date
@@ -74,6 +80,8 @@ class DateIterator:
             window (str): The size of each window (e.g., '7D' for 7 days)
             date_round (str): How to round the dates (e.g., 'D' for day)
         """
+        import pandas as pd
+
         self.date_feature = date_feature
 
         if self.date_feature is None:
@@ -98,7 +106,7 @@ class DateIterator:
 
         self.index = 0
 
-    def __iter__(self) -> "DateIterator":
+    def __iter__(self) -> DateIterator:
         """Return the iterator object."""
         return self
 
@@ -124,8 +132,6 @@ class DateIterator:
 
         # Filter DataFrame for current time window
         date = (
-            None
-            if self.date_feature is None
-            else self.df_date_series[mask].max().to_pydatetime()
+            None if self.date_feature is None else self.df_date_series[mask].max().to_pydatetime()
         )
         return date, mask

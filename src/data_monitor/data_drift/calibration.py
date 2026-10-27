@@ -50,9 +50,7 @@ def _iid_split(n: int, rng: np.random.Generator) -> tuple[list[int], list[int]]:
     return perm[:h].tolist(), perm[h : 2 * h].tolist()
 
 
-def _block_split(
-    n: int, block_size: int, rng: np.random.Generator
-) -> tuple[list[int], list[int]]:
+def _block_split(n: int, block_size: int, rng: np.random.Generator) -> tuple[list[int], list[int]]:
     n_blocks = n // block_size
     if n_blocks < 4:
         return _iid_split(n, rng)
@@ -80,9 +78,7 @@ def _feature_types(
         if c in overrides:
             out[c] = overrides[c]
         else:
-            out[c] = (
-                "numeric" if pd.api.types.is_numeric_dtype(df[c]) else "categorical"
-            )
+            out[c] = "numeric" if pd.api.types.is_numeric_dtype(df[c]) else "categorical"
     return out
 
 
@@ -155,9 +151,7 @@ def calibrate(
             splits.append(_block_split(n, bs, rng))
 
     n_mv = min(
-        n_boot_multivariate
-        if n_boot_multivariate is not None
-        else DEFAULT_N_BOOT_MULTIVARIATE,
+        n_boot_multivariate if n_boot_multivariate is not None else DEFAULT_N_BOOT_MULTIVARIATE,
         n_boot,
     )
 
@@ -244,9 +238,7 @@ def calibrate(
     )
 
 
-def detect_autocorrelation(
-    df: pd.DataFrame, threshold: float = 0.3
-) -> tuple[bool, float]:
+def detect_autocorrelation(df: pd.DataFrame, threshold: float = 0.3) -> tuple[bool, float]:
     """Lag-1 autocorrelation across numeric columns. Returns (is_ts, max_acf)."""
     max_acf = 0.0
     for c in df.columns:

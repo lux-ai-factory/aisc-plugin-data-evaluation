@@ -1,18 +1,37 @@
 from typing import Any
 
-from aisc_plugin_interface import MetricVisualization, ChartType
+from aisc_plugin_interface import (
+    MetricVisualization,
+    ChartType,
+    PluginFeatureFlags,
+)
 
 from ..base_data_plugin import BaseDataPlugin
 from ..data_input_provider import dataframe_iter
 from ..utils import add_metrics, group_metrics
-from .drift_detector import TabularDriftDetector
 
 
 @add_metrics
 class DataDriftPlugin(BaseDataPlugin):
     plugin_name = "Data Drift"
 
+    description = (
+        "Detects statistical drift between a reference dataset and an evaluated "
+        "dataset, per feature and per time window.\n\n"
+        "**Configuration:**\n\n"
+        "- **Frequency** — data frequency of batch starts for time-series analysis "
+        "(e.g. `30D`, `1M`). Leave empty to evaluate the whole test set at once.\n"
+        "- **Window Size** — duration of each analysis window (e.g. `90 days`); "
+        "together with Frequency this splits the evaluation into sliding time windows.\n\n"
+        "**Try it:** upload reference and evaluated datasets, and attach the "
+        "project's **Data Shape** so the target and date columns are resolved automatically."
+    )
+
     ui_icon = "alt_route"
+
+    @property
+    def feature_flags(self) -> PluginFeatureFlags:
+        return PluginFeatureFlags(show_dimensions_visualisation=True)
 
     drift_metric_names = [
         # Top-line decision
@@ -49,25 +68,15 @@ class DataDriftPlugin(BaseDataPlugin):
 
         config = self.validate_config_form_data(config_data)
         self.logger.info("Starting drift evaluation")
-        self.logger.info("Parsed %d features from config", len(config.features))
 
-        target_col = config.target_feature
-        date_feature = config.date_feature
+        _, date_feature, features = self._read_datashape()
         frequency = config.frequency.strip()
         window_size = config.window_size.strip()
 
-        features = [
-            f for f in config.features if f.name not in (target_col, date_feature)
-        ]
-
         if not features:
-            self.logger.warning(
-                "No input features found after excluding target and date"
-            )
+            self.logger.warning("No input features found after excluding target and date")
 
-        self.logger.debug(
-            "Evaluating %d features (excluding target and date)", len(features)
-        )
+        self.logger.debug("Evaluating %d features (excluding target and date)", len(features))
 
         try:
             reference = self.get_input_data("reference-dataset")
@@ -88,12 +97,12 @@ class DataDriftPlugin(BaseDataPlugin):
         )
 
         # TODO: include alpha
+        from .drift_detector import TabularDriftDetector
+
         detector = TabularDriftDetector()
         detector.fit(features, reference, date_feature=date_feature)
 
-        dates_masks = list(
-            dataframe_iter(evaluated, date_feature, frequency, window_size)
-        )
+        dates_masks = list(dataframe_iter(evaluated, date_feature, frequency, window_size))
         iterations = len(dates_masks)
         self.logger.info("Processing %d time windows", iterations)
 
@@ -142,9 +151,7 @@ class DataDriftPlugin(BaseDataPlugin):
                 for value in values
             ]
         )
-        self.upload_artifact(
-            "results.csv", df_artifact.to_csv(index=False).encode("utf-8")
-        )
+        self.upload_artifact("results.csv", df_artifact.to_csv(index=False).encode("utf-8"))
 
         self.logger.info("Drift evaluation completed")
         return gr_metrics
@@ -157,16 +164,38 @@ class DataDriftPlugin(BaseDataPlugin):
         # )
 
         # metrics = self.metric_names()
-        is_multivalued = (
-            config.date_feature
-            and config.frequency.strip()
-            and config.window_size.strip()
-        )
-        chart_type = ChartType.LINE if is_multivalued else ChartType.BARS
+        is_multivalued = bool(config.frequency.strip() and config.window_size.strip())
 
         return [
-            MetricVisualization(chart_type=chart_type, metrics=["Drift Score"]),
             MetricVisualization(
-                chart_type=ChartType.BARS, metrics=["Number of Drifted Features"]
+                chart_type=ChartType.LINE if is_multivalued else ChartType.BARS,
+                metrics=["Drift Score"],
+            ),
+            MetricVisualization(chart_type=ChartType.BARS, metrics=["Number of Drifted Features"]),
+            MetricVisualization(
+                chart_type=ChartType.BARS,
+                title="Per-Feature Drift Diagnostics",
+                description="Univariate drift metrics broken down by feature.",
+                metrics=[
+                    "psi",
+                    "ks",
+                    "wasserstein",
+                    "jsd_num",
+                    "smd",
+                    "anderson_darling",
+                    "levene",
+                    "chi2",
+                    "jsd_cat",
+                    "tvd",
+                    "psi_cat",
+                ],
+                metric_label_dimension="feature",
+            ),
+            MetricVisualization(
+                chart_type=ChartType.BARS,
+                title="Ensemble Drift Fraction",
+                description="Fraction of univariate metrics flagging drift, per feature.",
+                metrics=["ensemble_fraction"],
+                metric_label_dimension="feature",
             ),
         ]

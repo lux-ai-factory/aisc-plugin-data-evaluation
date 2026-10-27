@@ -36,6 +36,37 @@ class Feature(BaseModel):
         return str(pid) if pid is not None else None
 
 
+def feature_from_datashape(feature: dict[str, Any]) -> Feature:
+    """Map a datashape feature dict onto the local :class:`Feature` model.
+
+    The platform's ``semantic_type``/``dtype`` fields are translated into the
+    plugin's :class:`FeatureType` so the drift/anomaly detectors keep working
+    unchanged against datashape-derived features.
+    """
+    semantic_type = feature.get("semantic_type")
+    dtype = feature.get("dtype", "")
+
+    if semantic_type == "categorical":
+        feature_type = FeatureType.CATEGORICAL
+    elif semantic_type == "datetime":
+        feature_type = FeatureType.DATE
+    elif semantic_type in ("numeric", "boolean"):
+        feature_type = (
+            FeatureType.INTEGER
+            if str(dtype).startswith(("int", "uint", "bool"))
+            else FeatureType.FLOAT
+        )
+    else:
+        feature_type = FeatureType.CATEGORICAL
+
+    return Feature(
+        name=feature["name"],
+        min=float(feature.get("min") or 0.0),
+        max=float(feature.get("max") or 0.0),
+        type=feature_type,
+    )
+
+
 def group_metrics(
     dicts: list[dict[str, dict[str, Any]]],
 ) -> dict[str, list[dict[str, Any]]]:
@@ -67,8 +98,8 @@ def add_metrics(cls: type[T]) -> type[T]:
     for name in cls.metric_names():
 
         @metric(name)
-        def fct(self, evaluation_output: dict, _name=name) -> list[Measure]:
-            measures: list[dict] = evaluation_output.get(_name, [])
+        def fct(self, evaluation_output: dict | None, _name=name) -> list[Measure]:
+            measures: list[dict] = evaluation_output.get(_name, []) if evaluation_output else []
 
             return [
                 Measure(
@@ -76,6 +107,8 @@ def add_metrics(cls: type[T]) -> type[T]:
                     score=float(score),
                     time=measure.get("time", datetime.now()),
                     description=measure.get("description"),
+                    dimensions=measure.get("dimensions"),
+                    direction=measure.get("direction"),
                 )
                 for measure in measures
                 if (score := measure["score"]) is not None

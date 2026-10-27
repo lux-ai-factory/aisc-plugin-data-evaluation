@@ -8,7 +8,7 @@ A Python plugin for data evaluation, implementing data drift detection and anoma
 
 - **Data Drift Detection** with **multivariate decision** (C2ST + MMD) on the joint feature vector and **per-feature univariate diagnostics** (PSI, KS, Wasserstein, JSD, SMD, Anderson-Darling, Levene, Chi², TVD, PSI-categorical)
 - **Data-driven thresholds** — every threshold is calibrated from the reference dataset via bootstrap (no hardcoded `> 0.1` folklore)
-- **Tabular and time-series modes** — auto-detected from `date_feature` or lag-1 autocorrelation; TS mode uses block bootstrap to preserve temporal structure
+- **Tabular and time-series modes** — auto-detected from the `date` role in the data shape or lag-1 autocorrelation; TS mode uses block bootstrap to preserve temporal structure
 - **Linear-time MMD for big data** — auto-switches to Random Fourier Features approximation above 10k rows; subsamples to 5k for fast permutation tests on multi-million-row data
 - **Parallel bootstrap calibration** — multivariate (C2ST + MMD) calibration runs in parallel via joblib, ~3× faster on multi-core machines
 - **Guard layer** — schema validation, NaN/constant column handling, high-cardinality warnings, small-sample fallback
@@ -24,23 +24,26 @@ uv sync
 
 ## Quick Start
 
-Both plugins take a reference dataset (training data) and an evaluated dataset (test data) as `*.csv` or `*.parquet` files.
+Both plugins take a reference dataset (training data) and an evaluated dataset (test data) as `*.csv` or `*.parquet` files, plus the project's **Data Shape** AI component (features, target, date):
 
 ```python
-from aisc_plugin_data_evaluation import DataDriftPlugin
+from data_monitor import DataDriftPlugin
 
 plugin = DataDriftPlugin()
 plugin.set_input_content("reference-dataset", train_data_bytes)
 plugin.set_input_content("evaluated-dataset", test_data_bytes)
+plugin.set_input_content("datashape", datashape_json_bytes)  # project AI component
 
 results = plugin.evaluate({
-    "features": [...],
-    "target_feature": "label",
-    "date_feature": "timestamp",  # optional
-    "frequency": "7D",            # optional
-    "window_size": "30D",         # optional
+    "frequency": "7D",   # optional
+    "window_size": "30D", # optional
 })
 ```
+
+The **Data Shape** is a first-class AI component of the AISC platform, derived from
+the reference dataset on the project Settings page. It carries the feature list and
+the `target`/`date`/`feature` column roles — these are intentionally **not** part of
+the plugin config (interface `>= 0.3.0`).
 
 ## Plugins
 
@@ -112,13 +115,14 @@ Detects anomalies in the evaluated dataset compared to the reference dataset.
 
 ## Time-Windowed Evaluation
 
-Metrics can be computed over the entire dataset or over temporal windows:
+Metrics can be computed over the entire dataset or over temporal windows.
+Set a **Frequency** + **Window Size** in the config to slide windows over time
+(the date column itself is resolved from the **Data Shape** input):
 
 ```python
 config = {
-    "date_feature": "timestamp",  # Column containing dates
-    "frequency": "7D",            # Window hop size (e.g., weekly)
-    "window_size": "30D",         # Window duration (e.g., 30 days)
+    "frequency": "7D",    # Window hop size (e.g., weekly)
+    "window_size": "30D", # Window duration (e.g., 30 days)
 }
 ```
 
@@ -126,19 +130,31 @@ This produces metrics for each time window, useful for monitoring data quality o
 
 ## Validation & test coverage
 
-The drift pipeline is validated by **95 drift-specific tests** (plus 38 supporting tests for utilities, iterators, anomaly plugin, etc. — 133 total in the suite) across several layers:
+The suite is **65 tests** across the smoke, detector, plugin and utility layers,
+driven by deterministic generated fixtures:
 
-| Layer | Tests | Covers |
+| Test file | Tests | Covers |
 |---|---|---|
-| `test_drift_pipeline.py` | 40 | Tabular & TS drift scenarios, guard layer, output contract, time-windowing |
-| `test_drift_detector.py` | 9 | Core detector API (fit, call, metric names) |
-| `test_data_drift_plugin.py` | 13 | Plugin-level integration |
-| `test_drift_edge_cases.py` | 17 | Schema mismatches, NaN/Inf, unicode, mixed types, integer dtypes, multi-eval safety, determinism, big-data RFF path |
-| `test_drift_production_gotchas.py` | 16 | Memory growth over 50 evals, Parquet I/O, date-column edge cases (timezone, string, NaT), subtle drift sensitivity, pandas nullable dtypes (Int64, pd.NA, Categorical, Boolean) |
+| `test_smoke.py` | 2 | Plugin importable + `export_metrics(None)` returns `[]` |
+| `test_utils.py` | 11 | Feature models, `group_metrics`, `@add_metrics` |
+| `test_iterators.py` | 9 | `get_date_batches`, `DateIterator` |
+| `test_drift_detector.py` | 7 | Core detector API (fit, call, metric names) |
+| `test_anomaly_detector.py` | 8 | Anomaly detection logic (violations, categories, outliers) |
+| `test_data_drift_plugin.py` | 12 | Metadata, config, missing-input, case-driven evaluate |
+| `test_anomaly_detection_plugin.py` | 10 | Metadata, config, missing-input, case-driven evaluate |
+| `test_config_form.py` | 3 | Config defaults + validation |
+| `test_data_input_provider.py` | 3 | CSV/Parquet reading |
 
-Plus a `benchmark/` suite for synthetic drift validation with ground-truth labels (kept as regression artifact).
+Fixtures are **generated**, not committed: `tests/generate_files.py` deterministically
+derives each case (reference + evaluated CSVs, features-only datashape payload,
+webapp-importable `config.json`) into `tests/files/<case>/` (gitignored), and
+`tests/conftest.py` regenerates them automatically at collection time. Cases:
+`no_drift`, `drift`, `anomaly_normal`, `anomaly_outliers`.
 
-Real-world validation: pipeline runs end-to-end on the bundled credit-scoring data (`test_data_plugin/files/`) with **100% detection** on injected mean / variance / categorical drift and **0% false alarms** on a clean baseline.
+```bash
+uv run python -m pytest -q tests/   # 65 passed
+uv run python tests/generate_files.py  # manual regeneration
+```
 
 ## Development
 
@@ -193,10 +209,10 @@ git commit --no-verify -m "message"
 ### Project Structure
 
 ```
-src/aisc_plugin_data_evaluation/
-├── __init__.py              # Public exports
-├── base_data_plugin.py      # Abstract base class for plugins
-├── config_form.py           # Pydantic config + UI schema
+src/data_monitor/
+├── __init__.py              # Public exports (DataDriftPlugin, DataAnomalyPlugin)
+├── base_data_plugin.py      # Abstract base class (config, datashape reading, providers)
+├── config_form.py           # Pydantic config (frequency, window_size)
 ├── data_input_provider.py   # CSV/Parquet data reader
 ├── iterators.py             # Date windowing utilities
 ├── utils.py                 # Shared utilities and decorators
@@ -206,14 +222,19 @@ src/aisc_plugin_data_evaluation/
 └── data_drift/
     ├── plugin.py            # DataDriftPlugin
     ├── drift_detector.py    # Pipeline orchestration (guard, calibrate, evaluate)
-    ├── metrics.py           # 11 univariate metrics
+    ├── metrics.py           # Univariate metrics
     ├── multivariate.py      # C2ST + MMD (exact / RFF auto-switch)
     └── calibration.py       # IID + block bootstrap calibration, autocorr detect
 
-benchmark/                   # Synthetic-data validation (kept in-repo as regression test)
-docs/pipeline.png            # Pipeline diagram
-docs/pipeline.pdf            # Pipeline diagram (vector)
-PIPELINE.md                  # Pipeline diagram with explanatory text
+tests/
+├── test_utils.py             # Feature models, group_metrics, @add_metrics
+├── test_iterators.py         # Date windowing utilities
+├── test_drift_detector.py    # Core drift detector API
+├── test_anomaly_detector.py  # Anomaly detection logic
+├── test_data_drift_plugin.py # Plugin-level drift integration
+├── test_anomaly_detection_plugin.py  # Plugin-level anomaly integration
+├── test_config_form.py       # Config defaults + validation
+└── test_data_input_provider.py      # CSV/Parquet reading
 ```
 
 ## Tech Stack

@@ -61,9 +61,7 @@ class GuardReport:
     warnings: list[str]
 
 
-def _guard(
-    ref: pd.DataFrame, ev: pd.DataFrame
-) -> tuple[pd.DataFrame, pd.DataFrame, GuardReport]:
+def _guard(ref: pd.DataFrame, ev: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, GuardReport]:
     """Validate inputs, drop problematic columns, return cleaned ref/eval."""
     warnings: list[str] = []
     dropped_nan: list[str] = []
@@ -255,9 +253,7 @@ class TabularDriftDetector:
                 "These will be dropped from this evaluation.",
                 sorted(missing),
             )
-        evaluated_aligned = (
-            evaluated[ev_cols].copy() if ev_cols else evaluated.iloc[:, :0]
-        )
+        evaluated_aligned = evaluated[ev_cols].copy() if ev_cols else evaluated.iloc[:, :0]
 
         # Guard at eval time too (drops same-named bad columns if they sneak in)
         ref, ev, guard = _guard(self.reference, evaluated_aligned)
@@ -280,17 +276,13 @@ class TabularDriftDetector:
                 return "numeric"
             if ft == FeatureType.CATEGORICAL:
                 return "categorical"
-            return (
-                "numeric" if pd.api.types.is_numeric_dtype(ref[feat]) else "categorical"
-            )
+            return "numeric" if pd.api.types.is_numeric_dtype(ref[feat]) else "categorical"
 
         for feat in ref.columns:
             kind = _kind_of(feat)
             per_feature_results[feat] = {}
             flags: list[bool] = []
-            applicable_total = (
-                0  # count of metrics that should apply (for unbiased fraction)
-            )
+            applicable_total = 0  # count of metrics that should apply (for unbiased fraction)
             for metric_name, (fn, supports) in METRICS.items():
                 if supports != kind and supports != "both":
                     continue
@@ -298,9 +290,7 @@ class TabularDriftDetector:
                 try:
                     r = fn(ref[feat], ev[feat])
                 except Exception as e:
-                    logger.warning(
-                        "Metric %s on feature %s failed: %s", metric_name, feat, e
-                    )
+                    logger.warning("Metric %s on feature %s failed: %s", metric_name, feat, e)
                     # Treat failure as "no signal" (False flag, score=0) so the ensemble
                     # fraction denominator stays correct (don't silently shrink it).
                     per_feature_results[feat][metric_name] = MetricResult(
@@ -313,11 +303,7 @@ class TabularDriftDetector:
                     continue
                 # Calibrated flag overrides default
                 t = self.thresholds.univariate.get((metric_name, feat))
-                flag = (
-                    r.score > t.threshold
-                    if (t is not None and t.n_samples > 0)
-                    else r.flag
-                )
+                flag = r.score > t.threshold if (t is not None and t.n_samples > 0) else r.flag
                 per_feature_results[feat][metric_name] = MetricResult(
                     raw=r.raw,
                     score=r.score,
@@ -325,9 +311,7 @@ class TabularDriftDetector:
                     p_value=r.p_value,
                 )
                 flags.append(flag)
-            per_feature_ensemble[feat] = (
-                sum(flags) / applicable_total if applicable_total else 0.0
-            )
+            per_feature_ensemble[feat] = sum(flags) / applicable_total if applicable_total else 0.0
 
         # Multivariate (decision)
         if guard.small_sample or len(ref.columns) == 0:
@@ -351,9 +335,7 @@ class TabularDriftDetector:
             # adding a margin reduces FPR inflation without meaningfully hurting TPR
             # (drift signal usually exceeds the threshold by a wide margin).
             c2st_res.flag = c2st_res.raw > (self.thresholds.c2st + self.safety_buffer)
-            mmd_res.flag = mmd_res.raw > self.thresholds.mmd * (
-                1.0 + self.safety_buffer
-            )
+            mmd_res.flag = mmd_res.raw > self.thresholds.mmd * (1.0 + self.safety_buffer)
 
         drift_flag = bool(c2st_res.flag or mmd_res.flag)
         drift_score = float(max(c2st_res.score, mmd_res.score))
@@ -430,6 +412,7 @@ class TabularDriftDetector:
                             time=date,
                             description=desc,
                             feature_pid=str(pid) if pid is not None else None,
+                            dimensions={"feature": feat},
                         )
                     }
                 )
@@ -449,13 +432,12 @@ class TabularDriftDetector:
                         time=date,
                         description=feat,
                         feature_pid=str(pid) if pid is not None else None,
+                        dimensions={"feature": feat},
                     )
                 }
             )
 
-        out.append(
-            {"Number of Drifted Features": dict(score=nbr_drifted_features, time=date)}
-        )
+        out.append({"Number of Drifted Features": dict(score=nbr_drifted_features, time=date)})
 
         # Save guard report for the plugin to expose if needed
         self.guard_report = guard

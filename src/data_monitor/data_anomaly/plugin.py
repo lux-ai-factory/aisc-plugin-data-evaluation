@@ -1,18 +1,34 @@
 from typing import Any
 
-from aisc_plugin_interface import MetricVisualization, ChartType
+from aisc_plugin_interface import MetricVisualization, ChartType, PluginFeatureFlags
 
 from ..base_data_plugin import BaseDataPlugin
 from ..data_input_provider import dataframe_iter
 from ..utils import add_metrics, group_metrics
-from .anomaly_detector import TabularAnomalyDetector
 
 
 @add_metrics
 class DataAnomalyPlugin(BaseDataPlugin):
     plugin_name = "Data Anomaly"
 
+    description = (
+        "Detects anomalies in an evaluated dataset against a reference dataset, "
+        "per feature and per time window (new/missing categories, constraint "
+        "violations and distribution outliers).\n\n"
+        "**Configuration:**\n\n"
+        "- **Frequency** — data frequency of batch starts for time-series analysis "
+        "(e.g. `30D`, `1M`). Leave empty to evaluate the whole test set at once.\n"
+        "- **Window Size** — duration of each analysis window (e.g. `90 days`); "
+        "together with Frequency this splits the evaluation into sliding time windows.\n\n"
+        "**Try it:** upload reference and evaluated datasets, and attach the "
+        "project's **Data Shape** so the target and date columns are resolved automatically."
+    )
+
     ui_icon = "flag"
+
+    @property
+    def feature_flags(self) -> PluginFeatureFlags:
+        return PluginFeatureFlags(show_dimensions_visualisation=True)
 
     anomaly_metric_names = [
         "New Categories",
@@ -34,25 +50,15 @@ class DataAnomalyPlugin(BaseDataPlugin):
 
         config = self.validate_config_form_data(config_data)
         self.logger.info("Starting anomaly evaluation")
-        self.logger.info("Parsed %d features from config", len(config.features))
 
-        target_col = config.target_feature
-        date_feature = config.date_feature
+        _, date_feature, features = self._read_datashape()
         frequency = config.frequency.strip()
         window_size = config.window_size.strip()
 
-        features = [
-            f for f in config.features if f.name not in (target_col, date_feature)
-        ]
-
         if not features:
-            self.logger.warning(
-                "No input features found after excluding target and date"
-            )
+            self.logger.warning("No input features found after excluding target and date")
 
-        self.logger.debug(
-            "Evaluating %d features (excluding target and date)", len(features)
-        )
+        self.logger.debug("Evaluating %d features (excluding target and date)", len(features))
 
         try:
             reference = self.get_input_data("reference-dataset")
@@ -72,12 +78,12 @@ class DataAnomalyPlugin(BaseDataPlugin):
             "Reference shape: %s, Evaluated shape: %s", reference.shape, evaluated.shape
         )
 
+        from .anomaly_detector import TabularAnomalyDetector
+
         detector = TabularAnomalyDetector()
         detector.fit(features, reference)
 
-        dates_masks = list(
-            dataframe_iter(evaluated, date_feature, frequency, window_size)
-        )
+        dates_masks = list(dataframe_iter(evaluated, date_feature, frequency, window_size))
         iterations = len(dates_masks)
         self.logger.info("Processing %d time windows", iterations)
 
@@ -126,9 +132,7 @@ class DataAnomalyPlugin(BaseDataPlugin):
                 for value in values
             ]
         )
-        self.upload_artifact(
-            "results.csv", df_artifact.to_csv(index=False).encode("utf-8")
-        )
+        self.upload_artifact("results.csv", df_artifact.to_csv(index=False).encode("utf-8"))
 
         self.logger.info("Anomaly evaluation completed")
         return gr_metrics
@@ -141,9 +145,7 @@ class DataAnomalyPlugin(BaseDataPlugin):
         # )
 
         pie_metrics = [
-            metric_name
-            for metric_name in self.metric_names()
-            if "Anomaly" in metric_name
+            metric_name for metric_name in self.metric_names() if "Anomaly" in metric_name
         ]
 
         piechart = MetricVisualization(
@@ -151,10 +153,21 @@ class DataAnomalyPlugin(BaseDataPlugin):
             metrics=pie_metrics,
         )
 
-        # # NOTE: add this only if time series ...
-        # bars = MetricVisualization(
-        #     chart_type=ChartType.BARS,
-        #     metrics=pie_metrics,
-        # )
+        per_feature_metrics = [
+            "New Categories",
+            "Missing Categories",
+            "Upper Constraint Violations",
+            "Lower Constraint Violations",
+            "Distribution Outlier",
+        ]
 
-        return [piechart]
+        bars = MetricVisualization(
+            chart_type=ChartType.BARS,
+            title="Per-Feature Anomalies",
+            description="Anomaly counts broken down by feature.",
+            metrics=per_feature_metrics,
+            metric_label_dimension="feature",
+        )
+
+        # # NOTE: add this only if time series ...
+        return [piechart, bars]

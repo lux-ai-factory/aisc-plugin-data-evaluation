@@ -118,6 +118,7 @@ class TabularAnomalyDetector:
                             score=len(new_categories),
                             description=feat_name,
                             time=date,
+                            dimensions={"feature": feat_name},
                         )
                     },
                     {
@@ -125,6 +126,7 @@ class TabularAnomalyDetector:
                             score=len(missing_categories),
                             description=feat_name,
                             time=date,
+                            dimensions={"feature": feat_name},
                         )
                     },
                 ]
@@ -170,6 +172,7 @@ class TabularAnomalyDetector:
                             score=min_violations,
                             description=feature.name,
                             time=date,
+                            dimensions={"feature": feature.name},
                         )
                     },
                     {
@@ -177,6 +180,7 @@ class TabularAnomalyDetector:
                             score=max_violations,
                             description=feature.name,
                             time=date,
+                            dimensions={"feature": feature.name},
                         )
                     },
                     {
@@ -184,6 +188,7 @@ class TabularAnomalyDetector:
                             score=dist_violations,
                             description=feature.name,
                             time=date,
+                            dimensions={"feature": feature.name},
                         )
                     },
                 ]

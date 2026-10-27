@@ -58,9 +58,7 @@ class TestTabularDriftDetector:
             {
                 "age": np.random.randint(50, 90, 100),  # Shifted age distribution
                 "income": np.random.uniform(100000, 300000, 100),  # Shifted income
-                "category": np.random.choice(
-                    ["C", "D", "E"], 100
-                ),  # Different categories
+                "category": np.random.choice(["C", "D", "E"], 100),  # Different categories
             }
         )
 
@@ -94,9 +92,7 @@ class TestTabularDriftDetector:
         assert "ks" in metric_names
         assert "wasserstein" in metric_names
 
-    def test_categorical_drift_metrics(
-        self, categorical_features, reference_df, similar_df
-    ):
+    def test_categorical_drift_metrics(self, categorical_features, reference_df, similar_df):
         detector = TabularDriftDetector()
         detector.fit(categorical_features, reference_df)
         metrics = detector(similar_df)
@@ -105,21 +101,15 @@ class TestTabularDriftDetector:
         assert "chi2" in metric_names
         assert "jsd_cat" in metric_names
 
-    def test_drift_detected_high_drift(
-        self, numeric_features, reference_df, drifted_df
-    ):
+    def test_drift_detected_high_drift(self, numeric_features, reference_df, drifted_df):
         detector = TabularDriftDetector()
         detector.fit(numeric_features, reference_df)
         metrics = detector(drifted_df)
 
-        drift_detected = [
-            m for m in metrics if "drift_flag" in m and m["drift_flag"]["score"] > 0
-        ]
+        drift_detected = [m for m in metrics if "drift_flag" in m and m["drift_flag"]["score"] > 0]
         assert len(drift_detected) > 0
 
-    def test_aggregate_metrics_present(
-        self, numeric_features, reference_df, similar_df
-    ):
+    def test_aggregate_metrics_present(self, numeric_features, reference_df, similar_df):
         detector = TabularDriftDetector()
         detector.fit(numeric_features, reference_df)
         metrics = detector(similar_df)

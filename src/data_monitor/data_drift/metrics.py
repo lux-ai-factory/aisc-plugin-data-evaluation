@@ -41,18 +41,14 @@ def _clean_numeric(ref: pd.Series, ev: pd.Series) -> tuple[np.ndarray, np.ndarra
     return r, e
 
 
-def _clean_categorical(
-    ref: pd.Series, ev: pd.Series
-) -> tuple[pd.Series, pd.Series, list[str]]:
+def _clean_categorical(ref: pd.Series, ev: pd.Series) -> tuple[pd.Series, pd.Series, list[str]]:
     r = ref.dropna().astype(str)
     e = ev.dropna().astype(str)
     levels = sorted(set(r.unique()).union(e.unique()))
     return r, e, levels
 
 
-def _binned_probs(
-    x: np.ndarray, bin_edges: np.ndarray, eps: float = 1e-6
-) -> np.ndarray:
+def _binned_probs(x: np.ndarray, bin_edges: np.ndarray, eps: float = 1e-6) -> np.ndarray:
     counts, _ = np.histogram(x, bins=bin_edges)
     p = counts / max(counts.sum(), 1)
     p = p + eps
@@ -98,9 +94,7 @@ def ks_numeric(ref: pd.Series, ev: pd.Series) -> MetricResult:
     if len(r) < 2 or len(e) < 2:
         return MetricResult(raw=0.0, score=0.0, flag=False)
     stat, p = stats.ks_2samp(r, e, method="asymp")
-    return MetricResult(
-        raw=float(stat), score=float(stat), flag=p < 0.05, p_value=float(p)
-    )
+    return MetricResult(raw=float(stat), score=float(stat), flag=p < 0.05, p_value=float(p))
 
 
 def wasserstein_numeric(ref: pd.Series, ev: pd.Series) -> MetricResult:
@@ -285,9 +279,7 @@ def fisher_cat(ref: pd.Series, ev: pd.Series) -> MetricResult:
             p = float(res[1])
         except Exception:
             return MetricResult(raw=0.0, score=0.0, flag=False)
-    return MetricResult(
-        raw=float(p), score=_safe_p_to_score(p), flag=p < 0.05, p_value=float(p)
-    )
+    return MetricResult(raw=float(p), score=_safe_p_to_score(p), flag=p < 0.05, p_value=float(p))
 
 
 def z_test_prop(ref: pd.Series, ev: pd.Series) -> MetricResult:
@@ -308,9 +300,7 @@ def z_test_prop(ref: pd.Series, ev: pd.Series) -> MetricResult:
     se = np.sqrt(p_pool * (1 - p_pool) * (1 / n1 + 1 / n2)) + 1e-12
     z = (p1 - p2) / se
     p = float(2 * (1 - stats.norm.cdf(abs(z))))
-    return MetricResult(
-        raw=float(z), score=_safe_p_to_score(p), flag=p < 0.05, p_value=p
-    )
+    return MetricResult(raw=float(z), score=_safe_p_to_score(p), flag=p < 0.05, p_value=p)
 
 
 def cramer_v(ref: pd.Series, ev: pd.Series) -> MetricResult:
@@ -360,7 +350,5 @@ METRICS: dict[str, tuple[Callable[..., MetricResult], Supports]] = {
 
 def metrics_for(kind: str) -> list[str]:
     return [
-        name
-        for name, (_, supports) in METRICS.items()
-        if supports == kind or supports == "both"
+        name for name, (_, supports) in METRICS.items() if supports == kind or supports == "both"
     ]

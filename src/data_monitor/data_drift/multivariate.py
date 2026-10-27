@@ -208,9 +208,7 @@ def _mmd_rff(
     null_vals = []
     for _ in range(n_permutations):
         perm = rng.permutation(len(Z_all))
-        null_vals.append(
-            float(np.sum((Z_all[perm[:n]].mean(0) - Z_all[perm[n:]].mean(0)) ** 2))
-        )
+        null_vals.append(float(np.sum((Z_all[perm[:n]].mean(0) - Z_all[perm[n:]].mean(0)) ** 2)))
     null_vals = np.array(null_vals)
     p = float((null_vals >= observed).mean()) if len(null_vals) else 1.0
     return observed, p, null_vals
